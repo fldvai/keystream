@@ -1,0 +1,66 @@
+<Window WindowStyle="None" x:Class="Keystream.App.Views.RenameBindingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Keystream.App.Views"
+        xmlns:loc="clr-namespace:Keystream.App.Localization"
+        Title="{Binding Title}" Width="430" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        AllowsTransparency="True" Background="Transparent" Foreground="#E8EAF0"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
+    <!-- §124: dialog kecil ganti-nama kartu - salinan pola
+         PageEditWindow (chamfer + header + satu TextBox + Batal/
+         Simpan), bukan editor penuh. -->
+    <Window.Resources>
+        <Style x:Key="Field" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Background" Value="#171A24"/>
+            <Setter Property="Foreground" Value="#E8EAF0"/>
+            <Setter Property="BorderBrush" Value="#2E374A"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="14">
+        <!-- Shadow proxy layer: isolated shadow layer, prevents text blur and border artifacts -->
+        <Border CornerRadius="16" Background="#0A0C14" Margin="2">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.8" BlurRadius="16" ShadowDepth="4" Direction="315"/>
+            </Border.Effect>
+        </Border>
+
+        <views:ChamferBorder Chamfer="20" ClipChild="True"
+                             Background="{StaticResource WindowBackgroundBrush}"
+                             BorderBrush="{StaticResource ChassisMilledBevelBrush}"
+                             InnerBevelBrush="{StaticResource ChassisInnerBevelBrush}"
+                             BorderThickness="3.0"
+                             SpecularTopHighlight="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" BorderBrush="#1E86E0" BorderThickness="0,0,0,1.5"
+                        Background="{StaticResource HeaderBackgroundBrush}"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                    <Grid Height="46" Margin="18,0,12,0">
+                        <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   FontSize="15" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource ShellChromeButton}" HorizontalAlignment="Right"
+                                Click="Close_Click" ToolTip="{Binding [S0003], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                            <TextBlock Text="&#x2715;" FontSize="11" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold" Foreground="#B9C1D1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                </Border>
+                <StackPanel Grid.Row="1" Margin="24,16,24,22">
+                    <TextBlock Text="{Binding [S0011], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" Foreground="#6E7A8E" Margin="0,4,0,6"/>
+                    <TextBox x:Name="NameBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Field}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                        <Button Content="{Binding [S0010], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource GhostButton}" IsCancel="True" Margin="0,0,8,0" Padding="16,6" FontFamily="{StaticResource CyberTechFont}" FontWeight="Bold"/>
+                        <Button Content="{Binding [S0123], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource PrimaryButton}" IsDefault="True" Click="OnSave" Padding="18,6" FontFamily="{StaticResource CyberTechFont}" FontWeight="Bold"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </views:ChamferBorder>
+    </Grid>
+</Window>

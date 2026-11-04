@@ -1,0 +1,130 @@
+<Window WindowStyle="None" x:Class="Keystream.App.Views.BrowserManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Keystream.App.Views"
+        xmlns:loc="clr-namespace:Keystream.App.Localization"
+        Width="640" Height="680" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Title="{Binding [S0146], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+        AllowsTransparency="True" Background="Transparent" Foreground="#E8EAF0"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Opacity" Value="0.75"/>
+            <Setter Property="Margin" Value="0,12,0,4"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="Foreground" Value="#38BDF8"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <Border CornerRadius="16" Background="#0A0C14" Margin="2">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.85" BlurRadius="18" ShadowDepth="4" Direction="315"/>
+            </Border.Effect>
+        </Border>
+
+        <views:ChamferBorder Chamfer="20" ClipChild="True"
+                             Background="{StaticResource WindowBackgroundBrush}"
+                             BorderBrush="{StaticResource ChassisMilledBevelBrush}"
+                             InnerBevelBrush="{StaticResource ChassisInnerBevelBrush}"
+                             BorderThickness="2.8"
+                             SpecularTopHighlight="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" BorderBrush="#1E86E0" BorderThickness="0,0,0,1.5"
+                        Background="{StaticResource HeaderBackgroundBrush}"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                    <Grid Height="44" Margin="18,0,12,0">
+                        <TextBlock Text="{Binding [S0147], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="13.5" FontWeight="Bold"
+                                   Foreground="#E0F2FE" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource ShellChromeButton}" HorizontalAlignment="Right"
+                                Click="Close_Click" ToolTip="{Binding [S0003], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                            <TextBlock Text="&#x2715;" FontSize="11" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold" Foreground="#B9C1D1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="22,16,22,14">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S0148], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="{Binding [S0149], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                   Opacity="0.55" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <ListBox ItemsSource="{Binding CustomBrowsersWorking}" DisplayMemberPath="Name"
+                                 SelectedItem="{Binding SelectedCustomBrowser}" Height="130" Margin="0,0,0,6"/>
+                        <Button Content="{Binding [S0150], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Command="{Binding DeleteCustomBrowserCommand}" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [S0151], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding CustomName, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding [S0152], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="0,0,0,6" Height="32" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding [S0078], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding CustomExe, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding [S0079], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Height="32" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="{Binding [S0080], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Click="BrowseCustomExe_Click" Margin="6,0,0,0"/>
+                        </Grid>
+                        <TextBlock Text="{Binding [S0153], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox ItemsSource="{Binding EngineOptions}" DisplayMemberPath="Display" SelectedValuePath="Value" SelectedValue="{Binding CustomEngine}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding [S0154], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding CustomUserDataDir, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding [S0155], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Height="32" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="{Binding [S0080], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Click="BrowseCustomUserData_Click" Margin="6,0,0,0"/>
+                        </Grid>
+                        <Button Content="{Binding [S0156], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Command="{Binding AddCustomBrowserCommand}" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+
+                        <Separator Margin="0,10,0,14" Background="#202636"/>
+                        <TextBlock Text="{Binding [S0157], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="{Binding [S0158], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                   Opacity="0.55" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <Button Content="{Binding [S0159], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Click="ScanUserData_Click" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding ScanStatusText}" Opacity="0.75" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                        <StackPanel Visibility="{Binding HasScanPreview, Converter={StaticResource BoolVis}}">
+                            <TextBlock Text="{Binding [S0160], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                            <ListBox ItemsSource="{Binding ScanPreview}" DisplayMemberPath="Display" Height="130" Margin="0,0,0,6"/>
+                            <TextBlock Text="{Binding [S0078], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding ScanExe, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding [S0079], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Height="32" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Content="{Binding [S0080], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Click="BrowseScanExe_Click" Margin="6,0,0,0"/>
+                            </Grid>
+                            <TextBlock Text="{Binding [S0161], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding ScanName, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding [S0162], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="0,0,0,6" Height="32" VerticalAlignment="Center"/>
+                            <Button Content="{Binding [S0163], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Command="{Binding ConfirmScanCommand}" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding ErrorText}" Foreground="#EF4444" TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Visibility="{Binding HasErrorText, Converter={StaticResource BoolVis}}"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Row="2" Background="#0E121A" BorderBrush="#1C2433" BorderThickness="0,1,0,0" Padding="18,10">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="{Binding [S0010], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource GhostButton}" Command="{Binding CancelCommand}" Margin="0,0,8,0"/>
+                        <Button Content="{Binding [S0123], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </views:ChamferBorder>
+    </Grid>
+</Window>

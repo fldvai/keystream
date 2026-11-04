@@ -1,0 +1,140 @@
+<Window WindowStyle="None" x:Class="Keystream.App.Views.ProfileEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Keystream.App.Views"
+        xmlns:loc="clr-namespace:Keystream.App.Localization"
+        Title="{Binding Title}" Width="510" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        AllowsTransparency="True" Background="Transparent" Foreground="#E8EAF0"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
+        Closing="Window_Closing">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="Foreground" Value="#6E7A8E"/>
+            <Setter Property="Margin" Value="0,14,0,5"/>
+        </Style>
+        <Style x:Key="Field" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Background" Value="#171A24"/>
+            <Setter Property="Foreground" Value="#E8EAF0"/>
+            <Setter Property="BorderBrush" Value="#2E374A"/>
+            <Setter Property="Padding" Value="10,7"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="14">
+        <!-- Shadow proxy layer: isolated shadow layer, prevents text blur and border artifacts -->
+        <Border CornerRadius="16" Background="#0A0C14" Margin="2">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.8" BlurRadius="16" ShadowDepth="4" Direction="315"/>
+            </Border.Effect>
+        </Border>
+
+        <views:ChamferBorder Chamfer="20" ClipChild="True"
+                             Background="{StaticResource WindowBackgroundBrush}"
+                             BorderBrush="{StaticResource ChassisMilledBevelBrush}"
+                             InnerBevelBrush="{StaticResource ChassisInnerBevelBrush}"
+                             BorderThickness="3.0"
+                             SpecularTopHighlight="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" BorderBrush="#1E86E0" BorderThickness="0,0,0,1.5"
+                        Background="{StaticResource HeaderBackgroundBrush}"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                    <Grid Height="46" Margin="18,0,12,0">
+                        <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   FontSize="15" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource ShellChromeButton}" HorizontalAlignment="Right"
+                                Click="Close_Click" ToolTip="{Binding [S0003], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                            <TextBlock Text="&#x2715;" FontSize="11" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold" Foreground="#B9C1D1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                </Border>
+                <StackPanel Grid.Row="1" Margin="24,16,24,22">
+                    <TextBlock Text="{Binding InfoText}" FontSize="12" FontFamily="{StaticResource CyberTechFont}" Opacity="0.6" Margin="0,2,0,0"/>
+
+                    <TextBlock Text="{Binding [S0250], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="NameBox" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Field}"/>
+
+                    <TextBlock Text="{Binding [S0251], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding AutoSwitchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Field}"/>
+                    <TextBlock Text="{Binding [S0252], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                               FontSize="11.5" FontFamily="{StaticResource CyberTechFont}" Opacity="0.55" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox ItemsSource="{Binding RunningApps}" DisplayMemberPath="Display"
+                                  SelectedItem="{Binding SelectedRunningApp}"
+                                  FontFamily="{StaticResource CyberTechFont}" FontSize="13"/>
+                        <Button Grid.Column="1" Content="{Binding [S0253], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource GhostButton}"
+                                Command="{Binding AppendRunningAppCommand}" Margin="8,0,0,0" Padding="12,6"
+                                FontFamily="{StaticResource CyberTechFont}" FontWeight="Bold"/>
+                    </Grid>
+
+                    <!-- Switch-back: one checkbox row near the
+                         AUTO-PROFIL field, staged like every other
+                         modal field (check = stage, Simpan = apply,
+                         Batal = discard). Dark-box template copied
+                         from the card editor (BindingEditorWindow):
+                         unchecked = #1E222D box + #3A4152 border,
+                         checked = #1E86E0 + white check — the stock
+                         WPF white box + black check is illegible on
+                         this theme. Label is the shared S1841 key. -->
+                    <CheckBox IsChecked="{Binding SwitchBackOnAutoSwitch}" Margin="0,12,0,0"
+                              FontFamily="{StaticResource CyberTechFont}" FontSize="13" Foreground="#E8EAF0"
+                              Content="{Binding [S1841], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                        <CheckBox.Template>
+                            <ControlTemplate TargetType="CheckBox">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border x:Name="Box" Width="16" Height="16" CornerRadius="3"
+                                            Background="#1E222D" BorderBrush="#3A4152" BorderThickness="1">
+                                        <Path x:Name="Check" Data="M 3,8 L 6.5,11.5 L 13,4.5" Stroke="#FFFFFF" StrokeThickness="2"
+                                              Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
+                                               Text="{TemplateBinding Content}"
+                                               FontFamily="{TemplateBinding FontFamily}"
+                                               FontSize="{TemplateBinding FontSize}"
+                                               Foreground="{TemplateBinding Foreground}"/>
+                                </StackPanel>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="Box" Property="Background" Value="#1E86E0"/>
+                                        <Setter TargetName="Box" Property="BorderBrush" Value="#1E86E0"/>
+                                        <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Box" Property="BorderBrush" Value="#1E86E0"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </CheckBox.Template>
+                    </CheckBox>
+
+                    <TextBlock Text="{Binding ErrorText}" Foreground="#EF4444" TextWrapping="Wrap" Margin="0,12,0,0"
+                               Visibility="{Binding HasErrorText, Converter={StaticResource BoolVis}}"/>
+
+                    <Grid Margin="0,24,0,0">
+                        <Button Content="{Binding [S0254], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource GhostButton}"
+                                HorizontalAlignment="Left" Command="{Binding DuplicateCommand}" Padding="14,6"
+                                FontFamily="{StaticResource CyberTechFont}" FontWeight="Bold"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="{Binding [S0010], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource GhostButton}" Command="{Binding CancelCommand}" Margin="0,0,8,0" Padding="16,6" FontFamily="{StaticResource CyberTechFont}" FontWeight="Bold"/>
+                            <Button Content="{Binding [S0123], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" IsDefault="True" Padding="18,6" FontFamily="{StaticResource CyberTechFont}" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </views:ChamferBorder>
+    </Grid>
+</Window>

@@ -1,0 +1,99 @@
+<UserControl x:Class="Keystream.App.Views.SearchablePanelPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:Keystream.App.Localization"
+        xmlns:views="clr-namespace:Keystream.App.Views">
+    <UserControl.Resources>
+        <!-- Template baris mode multi (25 Okt 2026, direvisi atas
+             permintaan paduka): TEKS DULU, kotak belakangan - dan
+             kotaknya digambar sendiri untuk tema gelap. CheckBox
+             bawaan WPF merender kotak PUTIH dengan centang HITAM,
+             yang nyumbang di tema gelap ini. Di sini: teks kiri,
+             kotak 16px kanan (Background #1E222D, border #3A4152;
+             saat dicentang #1E86E0 + centang putih). CheckBox mengisi
+             lebar baris (Grid Background Transparent agar seluruh
+             baris bisa diklik) sehingga klik di mana pun pada baris
+             = klik CheckBox. SelectionChanged di mode multi sengaja
+             diabaikan (hanya menghapus seleksi) agar tidak terjadi
+             toggle ganda. -->
+        <DataTemplate x:Key="CheckRowTemplate">
+            <!-- Foreground eksplisit (25 Okt 2026): teks baris multi
+                 tampil hitam - pewarisan warna dari ListBoxItem tidak
+                 sampai ke TextBlock hasil ContentPresenter di template
+                 ini. Dipaksa terang di dua lapis (CheckBox + Grid). -->
+            <CheckBox Content="{Binding Display}" IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                      Foreground="#E8EAF0"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <CheckBox.Template>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent" TextElement.Foreground="#E8EAF0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter Grid.Column="0" VerticalAlignment="Center"/>
+                            <Border x:Name="Box" Grid.Column="1" Width="16" Height="16" CornerRadius="3"
+                                    Background="#1E222D" BorderBrush="#3A4152" BorderThickness="1" Margin="8,0,0,0">
+                                <Path x:Name="Check" Data="M 3,8 L 6.5,11.5 L 13,4.5" Stroke="#FFFFFF" StrokeThickness="2"
+                                      Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="#1E86E0"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#1E86E0"/>
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#1E86E0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </CheckBox.Template>
+            </CheckBox>
+        </DataTemplate>
+    </UserControl.Resources>
+    <!-- FontSize 12.5 di root (25 Okt 2026): gaya ComboBox bawaan
+         menetapkan FontSize 12.5 eksplisit, sementara kontrol ini
+         mewarisi default 12 - selisih itu yang membuat hurufnya
+         terlihat lebih kecil dari dropdown di atasnya. Satu setter di
+         root mengalir ke header, kotak cari, dan item daftar (gaya
+         TextBox/ListBox tidak menetapkan FontSize sendiri). -->
+    <Grid TextElement.FontSize="12.5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <!-- Padding 10,0,9,0 = geometri ComboBox bawaan (teks mulai 10,
+             chevron 9 dari tepi kanan); warna chevron disamakan. -->
+        <Border x:Name="HeaderBorder" Grid.Row="0" MinHeight="30" Background="#1E222D" BorderBrush="#3A4152"
+                BorderThickness="2" CornerRadius="6" Padding="10,0,9,0" Cursor="Hand"
+                MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <Grid>
+                <TextBlock x:Name="HeaderText" VerticalAlignment="Center" Foreground="#E7EAF0"/>
+                <!-- Chevron SAMA PERSIS dengan template ComboBox bawaan
+                     (App.xaml): Path goresan, bukan glif teks ▾ - glif
+                     teks merender lebih tebal dan berbeda bentuk.
+                     Seperti dropdown bawaan, chevron ini statis (tidak
+                     berputar saat dibuka; panel yang terbuka sudah
+                     cukup menandakan statusnya). -->
+                <Path Data="M 0 0 L 4 4 L 8 0" Stroke="#B9C1D1" StrokeThickness="1.6"
+                      HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+        <Border x:Name="PanelBorder" Grid.Row="1" Visibility="Collapsed" Margin="0,4,0,0"
+                Background="#1B1F28" BorderBrush="#3A4152" BorderThickness="1" CornerRadius="6">
+            <StackPanel>
+                <!-- Height 32 (25 Okt 2026): gaya TextBox global punya
+                     Padding vertikal 0 sehingga kotak telanjang menciut
+                     setinggi huruf saja - sangat tipis. Konvensi yang
+                     sama dengan kolom input lain di jendela ini (§26). -->
+                <TextBox x:Name="FilterBox" Tag="{Binding [S0255], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="6,6,6,4" Height="32"
+                         TextChanged="FilterBox_TextChanged" KeyDown="FilterBox_KeyDown"
+                         views:TextBoxRevert.EnableEscapeRestore="False"/>
+                <ListBox x:Name="PickList" DisplayMemberPath="Display" MaxHeight="180" Margin="6,0,6,6"
+                         SelectionChanged="PickList_SelectionChanged"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

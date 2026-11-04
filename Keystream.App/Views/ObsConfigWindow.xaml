@@ -1,0 +1,469 @@
+<Window WindowStyle="None" x:Class="Keystream.App.Views.ObsConfigWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Keystream.App.Views"
+        xmlns:loc="clr-namespace:Keystream.App.Localization"
+        Width="470" Height="460" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Title="{Binding [S1760], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+        AllowsTransparency="True" Background="Transparent" Foreground="#E8EAF0"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType"
+        Closing="Window_Closing">
+    <!-- §149-B1: ukuran STATIK (Width 470, Height 460) - SizeToContent
+         dihapus agar tinggi tidak berubah saat pindah tab. Height 460
+         diturunkan dari XAML (100% DPI, dibulatkan ke atas per komponen):
+         chrome = margin luar Grid 28 (14+14) + BorderThickness
+         ChamferBorder 6 (2,8+2,8) + header 46 (Grid 44 + border bawah
+         1,5) + footer 53 (border atas 1 + Padding 10+10 + tombol 32)
+         + margin TabControl 30 (16+14) + strip tab 31 (Padding tab
+         7+7 + baris judul 16 + border atas 1) = 194. Isi tab OBS =
+         pill 66 (Padding 16 + isi 36 + margin bawah 14) + label/kotak
+         124 (2× label 20 + 2× kotak 42) + tombol 40 (32 + margin 8)
+         = 230. Isi tab Streamer.bot = pill 60 (52 + margin 8) + grid
+         120 (sel 50 + spacer 8 + sel 50 + margin 12) + tombol 40
+         = 220. Cadangan 36 = satu baris transien 24 (baris alasan
+         gagal / pesan membungkus, termasuk marginnya) + slack 12
+         (variasi metrik font/pembulatan DPI). Kebutuhan = 194 +
+         max(230, 220) + 36 = 460. Lebar tetap 470: lebar konten
+         tidak berubah (tidak ada kontrol baru/melebar). Render
+         sesungguhnya hanya dapat dibuktikan di PC (CARA 792+). -->
+    <Window.Resources>
+        <!-- §148: dipakai baris alasan kegagalan tab Streamer.bot
+             (pola SettingsWindow: converter window-local). -->
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Base" CornerRadius="5"
+                                Background="#10131C"
+                                BorderBrush="#222B3A"
+                                BorderThickness="1,1,1,2">
+                            <Border x:Name="Face" CornerRadius="4"
+                                    Margin="1,1,1,1"
+                                    BorderBrush="#3D4B63"
+                                    BorderThickness="1"
+                                    Padding="{TemplateBinding Padding}">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#2C374A" Offset="0.0"/>
+                                        <GradientStop Color="#1A212E" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#38465D" Offset="0.0"/>
+                                            <GradientStop Color="#232B3B" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Face" Property="BorderBrush" Value="#5B7093"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Face" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Face" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#181F2B" Offset="0.0"/>
+                                            <GradientStop Color="#121721" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PrimaryAction" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Base" CornerRadius="5"
+                                Background="#08233C"
+                                BorderBrush="#175084"
+                                BorderThickness="1,1,1,2">
+                            <Border x:Name="Face" CornerRadius="4"
+                                    Margin="1,1,1,1"
+                                    BorderBrush="#4FA6F7"
+                                    BorderThickness="1"
+                                    Padding="{TemplateBinding Padding}">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#2596F8" Offset="0.0"/>
+                                        <GradientStop Color="#1570BD" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#38A8FF" Offset="0.0"/>
+                                            <GradientStop Color="#1E86E0" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Face" Property="BorderBrush" Value="#7EC8FF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Face" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Face" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#1264A8" Offset="0.0"/>
+                                            <GradientStop Color="#0E4E88" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <!-- Shadow Proxy Layer -->
+        <Border CornerRadius="16" Background="#0A0C14" Margin="2">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.85" BlurRadius="18" ShadowDepth="4" Direction="315"/>
+            </Border.Effect>
+        </Border>
+
+        <!-- Main Window Frame -->
+        <views:ChamferBorder Chamfer="20" ClipChild="True"
+                             Background="{StaticResource WindowBackgroundBrush}"
+                             BorderBrush="{StaticResource ChassisMilledBevelBrush}"
+                             InnerBevelBrush="{StaticResource ChassisInnerBevelBrush}"
+                             BorderThickness="2.8"
+                             SpecularTopHighlight="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header Bar -->
+                <Border Grid.Row="0" BorderBrush="#1E86E0" BorderThickness="0,0,0,1.5"
+                        Background="{StaticResource HeaderBackgroundBrush}"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                    <Grid Height="44" Margin="18,0,12,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <views:IconView Icon="obs" Width="16" Height="16" Foreground="#38BDF8" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding [S1760], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="13.5" FontWeight="Bold"
+                                       Foreground="#E0F2FE" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Style="{StaticResource ShellChromeButton}" HorizontalAlignment="Right"
+                                Click="Close_Click" ToolTip="{Binding [S0003], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                            <TextBlock Text="&#x2715;" FontSize="11" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold" Foreground="#B9C1D1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Body Content: §148 TabControl (style tab gelap global
+                     App.xaml berlaku otomatis, tanpa restyle). Tab
+                     pertama = OBS STUDIO, terpilih default. Isi tab OBS
+                     VERBATIM dari StackPanel lama, hanya dipindah ke
+                     dalam tab; satu-satunya tambahan atribut adalah
+                     MinWidth="86" + Height="32" eksplisit pada tombol
+                     hubung/putus (§173c: pasangan Hubungkan/Putuskan
+                     ikut status, satu terlihat - efek sama dengan
+                     MinWidth/Height implisit dari style window-local,
+                     kini eksplisit sesuai aturan §148). -->
+                <TabControl Grid.Row="1" Margin="22,16,22,14">
+                    <TabItem Header="{Binding [S0242], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                        <StackPanel>
+                    <!-- Live Connection Status Pill -->
+                    <Border Background="#121620" BorderBrush="#20293B" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,14">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Ellipse Width="13" Height="13" Fill="{Binding ObsStatusDot}" Opacity="0.25" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse Width="7" Height="7" Fill="{Binding ObsStatusDot}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ObsStatusText, StringFormat='Status: {0}'}" FontSize="12.5" FontWeight="Bold"
+                                           Foreground="#E2E8F0" FontFamily="{StaticResource CyberTechFont}"/>
+                                <TextBlock Text="{Binding MessageText}" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"
+                                           FontFamily="{StaticResource CyberTechFont}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Host Field -->
+                    <TextBlock Text="{Binding [S0244], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8"
+                               FontFamily="{StaticResource CyberTechFont}" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ObsHost, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="{StaticResource CyberTechFont}" FontSize="12.5" Height="30" Margin="0,0,0,12"/>
+
+                    <!-- Password Field -->
+                    <TextBlock Text="{Binding [S0245], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold"
+                               Foreground="#94A3B8" FontFamily="{StaticResource CyberTechFont}" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding ObsPassword, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="{StaticResource CyberTechFont}" FontSize="12.5" Height="30" Margin="0,0,0,12"/>
+
+                    <!-- §174: tombol hubung/putus warna NORMAL
+                         (GhostButton, seperti tombol tetangga) + DOT
+                         status: merah saat putus, hijau saat
+                         terhubung. Mekanisme visibility-swap, label,
+                         dan command tidak berubah. Height 32 +
+                         Padding 16,6 + MinWidth 86 eksplisit di
+                         kedua tombol (sama seperti sebelumnya)
+                         agar anggaran tinggi 460 tidak berubah:
+                         hanya satu yang terlihat. -->
+                    <Button Command="{Binding ToggleConnectionCommand}"
+                            HorizontalAlignment="Left" Padding="16,6" MinWidth="86" Height="32" Margin="0,0,0,8">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#EF4444"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsObsConnected}" Value="True">
+                                                    <Setter Property="Fill" Value="#3DDC84"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="{Binding [S0174], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button.Content>
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsObsConnected}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Command="{Binding ToggleConnectionCommand}"
+                            HorizontalAlignment="Left" Padding="16,6" MinWidth="86" Height="32" Margin="0,0,0,8">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#EF4444"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsObsConnected}" Value="True">
+                                                    <Setter Property="Fill" Value="#3DDC84"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="{Binding [S1835], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button.Content>
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsObsConnected}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                        </StackPanel>
+                    </TabItem>
+
+                    <!-- §148: tab STREAMER BOT, cermin tab OBS - pill
+                         status + baris alasan menetap, grid 2×2 (§148-B3),
+                         tombol hubung/putus sendiri. Tanpa hint: hint OBS
+                         (S0247) spesifik OBS, tidak ada salinan yang
+                         diperintahkan, jadi tidak diada-adakan. -->
+                    <TabItem Header="{Binding [S1764], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                        <StackPanel>
+                    <!-- Live Connection Status Pill (twin OBS) -->
+                    <Border Background="#121620" BorderBrush="#20293B" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Ellipse Width="13" Height="13" Fill="{Binding StreamerBotStatusDot}" Opacity="0.25" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse Width="7" Height="7" Fill="{Binding StreamerBotStatusDot}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding StreamerBotStatusText, StringFormat='Status: {0}'}" FontSize="12.5" FontWeight="Bold"
+                                           Foreground="#E2E8F0" FontFamily="{StaticResource CyberTechFont}"/>
+                                <TextBlock Text="{Binding StreamerBotMessageText}" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"
+                                           FontFamily="{StaticResource CyberTechFont}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Persistent failure reason (pola §147 Settings) -->
+                    <TextBlock Text="{Binding StreamerBotFailureReasonText}" TextWrapping="Wrap" Margin="0,0,0,8"
+                               Foreground="#FCA5A5" FontSize="11" FontFamily="{StaticResource CyberTechFont}"
+                               Visibility="{Binding HasStreamerBotFailureReason, Converter={StaticResource BoolVis}}"/>
+
+                    <!-- §148-B3: grid 2×2 - ColumnDefinitions IDENTIK
+                         dengan grid Settings (2* / 8 / 1*), baris
+                         Auto + spacer 8 + Auto; label di atas field
+                         di tiap sel, gaya label/field tab OBS. -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Grid.Column="0">
+                            <TextBlock Text="{Binding [S1744], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8"
+                                       FontFamily="{StaticResource CyberTechFont}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding StreamerBotHost, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{StaticResource CyberTechFont}" FontSize="12.5" Height="30"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="0" Grid.Column="2">
+                            <TextBlock Text="{Binding [S1745], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8"
+                                       FontFamily="{StaticResource CyberTechFont}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding StreamerBotPortText, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{StaticResource CyberTechFont}" FontSize="12.5" Height="30"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="0">
+                            <TextBlock Text="{Binding [S1746], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8"
+                                       FontFamily="{StaticResource CyberTechFont}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding StreamerBotEndpoint, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{StaticResource CyberTechFont}" FontSize="12.5" Height="30"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="2">
+                            <TextBlock Text="{Binding [S1747], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8"
+                                       FontFamily="{StaticResource CyberTechFont}" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding StreamerBotPassword, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="{StaticResource CyberTechFont}" FontSize="12.5" Height="30"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- §174: pasangan hubung/putus Streamer.bot -
+                         warna NORMAL (GhostButton) + DOT status
+                         (merah putus / hijau terhubung), seperti
+                         tab OBS di atas. Mekanisme, label, dan
+                         command tidak berubah; ukuran eksplisit
+                         sama (satu terlihat). -->
+                    <Button Command="{Binding ToggleStreamerBotConnectionCommand}"
+                            HorizontalAlignment="Left" Padding="16,6" MinWidth="86" Height="32" Margin="0,0,0,8">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#EF4444"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreamerBotConnected}" Value="True">
+                                                    <Setter Property="Fill" Value="#3DDC84"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="{Binding [S0174], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button.Content>
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsStreamerBotConnected}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Command="{Binding ToggleStreamerBotConnectionCommand}"
+                            HorizontalAlignment="Left" Padding="16,6" MinWidth="86" Height="32" Margin="0,0,0,8">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#EF4444"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreamerBotConnected}" Value="True">
+                                                    <Setter Property="Fill" Value="#3DDC84"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="{Binding [S1835], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button.Content>
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsStreamerBotConnected}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+
+                <!-- Footer Action Buttons -->
+                <Border Grid.Row="2" Background="#0E121A" BorderBrush="#1C2433" BorderThickness="0,1,0,0" Padding="18,10">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="{Binding [S0010], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Command="{Binding CancelCommand}" Margin="0,0,8,0" Width="86"/>
+                        <Button Content="{Binding [S0123], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Style="{StaticResource PrimaryAction}" Command="{Binding SaveCommand}" Width="86"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </views:ChamferBorder>
+    </Grid>
+</Window>

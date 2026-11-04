@@ -1,0 +1,41 @@
+# Keystream .gitignore
+# Build outputs at every level. Never commit bin/ or obj/.
+**/bin/
+**/obj/
+
+# Published app output. publish-app/ is a build product, not source.
+# publish-staging/ is a stale build product and is deleted in Batch 1.
+publish-app/
+publish-staging/
+
+# Visual Studio user and workspace state.
+*.user
+*.suo
+.vs/
+
+# Runtime crash logs. crash.log lives under %AppData%\Keystream at
+# runtime; any copy that lands in the tree must not be committed.
+crash.log
+*.log
+
+# User config samples. Runtime config lives under %AppData%\Keystream
+# and is never part of the repository. No sample config file exists in
+# the tree at Batch 1 time; this pattern guards future samples.
+*.sample.json
+*.sample.config
+
+# Local run instructions for the VM. Not part of the pushed tree.
+CARA_JALANKAN.txt
+
+# Archived phase notes. Moved offline in Batch 1 to
+# ~/workspace/keystream-docs-archive-backup/ and excluded here.
+docs-archive/
+
+# Installer build-time inputs. These are transient files produced
+# during a Setup build (payload.zip from publish output, and the
+# official Interception installer) and deleted after the build.
+# They must never be committed as binaries.
+Keystream.Setup/payload.zip
+Keystream.Setup/install-interception.exe
+
+KeystreamSetup.exe

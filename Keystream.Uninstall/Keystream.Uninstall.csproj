@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <AssemblyName>Uninstall</AssemblyName>
+    <ApplicationIcon>..\Keystream.App\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RootNamespace>Keystream.Setup</RootNamespace>
+    <Version>1.0.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Product>Keystream</Product>
+    <Title>Keystream Uninstall</Title>
+    <Description>Uninstaller for Keystream Secondary Macro Deck</Description>
+    <Company>Keystream</Company>
+    <Authors>Keystream</Authors>
+    <Copyright>Copyright © 2026 Keystream. All rights reserved.</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="..\Keystream.App\app.ico" Link="app.ico">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <!-- Uninstall UI + helpers: the same sources as Keystream.Setup
+       (single source of truth, compiled into both exes). -->
+  <ItemGroup>
+    <Page Include="..\Keystream.Setup\UninstallWindow.xaml" Link="UninstallWindow.xaml" />
+    <Compile Include="..\Keystream.Setup\UninstallWindow.xaml.cs" Link="UninstallWindow.xaml.cs" DependentUpon="UninstallWindow.xaml" />
+    <Page Include="..\Keystream.Setup\MessageDialog.xaml" Link="MessageDialog.xaml" />
+    <Compile Include="..\Keystream.Setup\MessageDialog.xaml.cs" Link="MessageDialog.xaml.cs" DependentUpon="MessageDialog.xaml" />
+    <Compile Include="..\Keystream.Setup\DriverInstaller.cs" Link="DriverInstaller.cs" />
+    <Compile Include="..\Keystream.Setup\ShortcutHelper.cs" Link="ShortcutHelper.cs" />
+  </ItemGroup>
+
+  <!-- Wave-2 localization sources (single source of truth, compiled
+       into both exes): SetupStrings (generated), SetupLocalizer,
+       ConfigLanguage, and the Core RTL helper. -->
+  <ItemGroup>
+    <Compile Include="..\Keystream.Setup\Localization\SetupStrings.g.cs" Link="SetupStrings.g.cs" />
+    <Compile Include="..\Keystream.Setup\Localization\SetupLocalizer.cs" Link="SetupLocalizer.cs" />
+    <Compile Include="..\Keystream.Setup\ConfigLanguage.cs" Link="ConfigLanguage.cs" />
+    <Compile Include="..\Keystream.Core\Localization\FlowDirection.cs" Link="FlowDirection.cs" />
+    <Compile Include="..\Keystream.Core\Localization\LanguageHandoff.cs" Link="LanguageHandoff.cs" />
+  </ItemGroup>
+
+</Project>

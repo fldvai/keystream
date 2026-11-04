@@ -1,0 +1,204 @@
+<Window x:Class="Keystream.App.Views.FloatingRecordPanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Keystream.App.Views"
+        WindowStyle="None" ResizeMode="NoResize" Topmost="True"
+        ShowInTaskbar="False" ShowActivated="False"
+        AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="Manual"
+        Width="172" Height="130" Foreground="#E8EAF0"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        Loaded="Window_Loaded" Deactivated="Window_Deactivated"
+        IsVisibleChanged="Window_IsVisibleChanged">
+    <Window.Resources>
+        <!-- Local-only gradients (§111). The app-wide default Button
+             template (GhostButton in App.xaml) ignores Background, so
+             these gradients only render through the local button
+             template below. Nothing here touches App.xaml. -->
+        <LinearGradientBrush x:Key="PauseStateGradient" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#F5A623" Offset="0.0"/>
+            <GradientStop Color="#B45309" Offset="1.0"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="ResumeStateGradient" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#22C55E" Offset="0.0"/>
+            <GradientStop Color="#15803D" Offset="1.0"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="StopGradient" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#E5484D" Offset="0.0"/>
+            <GradientStop Color="#B3261E" Offset="1.0"/>
+        </LinearGradientBrush>
+        <!-- §112: Playtest gradient (mockup v5: blue). Record reuses
+             StopGradient (red), per the mockup's ● button. -->
+        <LinearGradientBrush x:Key="PlaytestGradient" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#2596F8" Offset="0.0"/>
+            <GradientStop Color="#1570BD" Offset="1.0"/>
+        </LinearGradientBrush>
+        <!-- Local-only icon-button template: a plain rounded rect bound
+             to the button's Background, so the local gradients above
+             actually show. Hover/press feedback is opacity-only. -->
+        <Style x:Key="FloatingPanelIconButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="8" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.93"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <!-- F-A1: a disabled panel button must LOOK
+                                 disabled (Opacity 0.5, mirroring
+                                 PrimaryButton in App.xaml). Last in
+                                 the collection so it wins over hover/
+                                 press while disabled. The hide
+                                 control is never disabled; its own
+                                 style is untouched. -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Local-only flat style for the hide control: no chrome,
+             foreground brightens on hover. -->
+        <Style x:Key="FloatingPanelHideButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="#8A93A5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Root border: the drag surface. Mouse handlers live here (not
+         on the inner Grid) because this Border is the element that
+         receives presses on background areas; the inner Grid is
+         transparent so presses on empty grid areas bubble up to it.
+         Presses whose source is inside a Button are ignored in code. -->
+    <!-- §112: border is the app blue #1E86E0 in EVERY state
+         (FloatingRecordPanelLogic.PanelBorderHex); the code-behind
+         never changes it. State is carried only by the dot + buttons. -->
+    <Border x:Name="PanelBorder" CornerRadius="11" Background="#0D1017"
+            BorderBrush="#1E86E0" BorderThickness="1.5" Padding="4,10,4,11"
+            MouseEnter="Panel_MouseEnter" MouseMove="Panel_MouseMove"
+            MouseLeftButtonDown="Panel_MouseLeftButtonDown"
+            MouseLeftButtonUp="Panel_MouseLeftButtonUp">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" Opacity="0.6" BlurRadius="10" ShadowDepth="2" Direction="315"/>
+        </Border.Effect>
+        <Grid x:Name="RootGrid" Background="Transparent">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="64"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 1: state dot + name + hide control. Drag strip. -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <!-- §112 default = Ready (grey dot); SetReady/SetPaused
+                     in the code-behind own the colour after first sync. -->
+                <Border x:Name="StateDot" Grid.Column="0" Width="10" Height="10"
+                        CornerRadius="5" Background="#8A93A5" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NameTextBlock" Grid.Column="1" Margin="7,0,0,0"
+                           FontSize="12.5" FontWeight="Bold" Foreground="#E8EAF0"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                <Button x:Name="HideButton" Grid.Column="2" Width="20" Height="20" Margin="4,0,0,0"
+                        Style="{StaticResource FloatingPanelHideButtonStyle}" Click="HideButton_Click">
+                    <TextBlock Text="&#x2715;" FontSize="14" LineHeight="14" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold"
+                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+            </Grid>
+
+            <!-- Row 2: two icon-only buttons. Roles are decided by
+                 FloatingRecordPanelLogic per state and rendered by the
+                 code-behind: Ready = ● Record / ▶ Playtest, Recording
+                 = ❚❚ Pause / ■ Stop, Paused = ▶ Resume / ■ Stop.
+                 XAML defaults are the Ready pair. -->
+            <Grid Grid.Row="1" Margin="8,0,8,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="FirstButton" Grid.Column="0" Height="38" VerticalAlignment="Center"
+                        Style="{StaticResource FloatingPanelIconButtonStyle}"
+                        Background="{StaticResource StopGradient}"
+                        Click="FirstButton_Click">
+                    <views:IconView x:Name="FirstButtonIcon" Icon="record" Width="17" Height="17" Foreground="White"/>
+                </Button>
+                <Button x:Name="SecondButton" Grid.Column="2" Height="38" VerticalAlignment="Center"
+                        Style="{StaticResource FloatingPanelIconButtonStyle}"
+                        Background="{StaticResource PlaytestGradient}"
+                        Click="SecondButton_Click">
+                    <views:IconView x:Name="SecondButtonIcon" Icon="play-triangle" Width="17" Height="17" Foreground="White"/>
+                </Button>
+            </Grid>
+
+            <!-- Row 3: indicators below the buttons: elapsed (left),
+                 step count (right, fixed column so the row never widens). -->
+            <Grid Grid.Row="3" Margin="0,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="52"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="TimeTextBlock" Grid.Column="0" Text="00:00"
+                           FontSize="14" FontWeight="Bold" Foreground="#E8EAF0"
+                           Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
+                <TextBlock x:Name="CountTextBlock" Grid.Column="2" Text="0"
+                           FontSize="13.5" FontWeight="Bold" Foreground="#E8EAF0"
+                           TextAlignment="Right" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- §112: playtest countdown overlay. Covers rows 1–3
+                 (Grid.Row 1, RowSpan 3: buttons + spacer +
+                 indicators) so the × in row 0 stays above it and
+                 clickable; numbers only, no words. Declared last
+                 inside RootGrid so it renders above the buttons.
+                 §120 F-B1: a press on the overlay cancels the
+                 countdown (CountdownOverlay_MouseLeftButtonDown,
+                 handled) - it never reaches the buttons or the
+                 drag handler. F-A4 NOT applied here: the overlay
+                 must stay hit-testable for that cancel press. -->
+            <Grid x:Name="CountdownOverlay" Grid.Row="1" Grid.RowSpan="3"
+                  Background="#8C05060A" Visibility="Collapsed"
+                  MouseLeftButtonDown="CountdownOverlay_MouseLeftButtonDown">
+                <TextBlock x:Name="CountdownNumberTextBlock" Text="3"
+                           FontSize="52" FontWeight="ExtraBold" Foreground="White"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

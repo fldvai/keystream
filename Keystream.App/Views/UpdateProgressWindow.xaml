@@ -1,0 +1,125 @@
+<Window WindowStyle="None" x:Class="Keystream.App.Views.UpdateProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Keystream.App.Views"
+        xmlns:loc="clr-namespace:Keystream.App.Localization"
+        Width="440" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        AllowsTransparency="True" Background="Transparent" Foreground="#E8EAF0"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="#E8EAF0"/>
+            <Setter Property="Padding" Value="16,6"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Base" CornerRadius="5"
+                                Background="#10131C"
+                                BorderBrush="#222B3A"
+                                BorderThickness="1,1,1,2">
+                            <Border x:Name="Face" CornerRadius="4"
+                                    Margin="1,1,1,1"
+                                    BorderBrush="#3D4B63"
+                                    BorderThickness="1"
+                                    Padding="{TemplateBinding Padding}">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#2C374A" Offset="0.0"/>
+                                        <GradientStop Color="#1A212E" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#38465D" Offset="0.0"/>
+                                            <GradientStop Color="#232B3B" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Face" Property="BorderBrush" Value="#5B7093"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Face" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="Face" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#181F2B" Offset="0.0"/>
+                                            <GradientStop Color="#121721" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="14">
+        <Border CornerRadius="16" Background="#0A0C14" Margin="2">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.8" BlurRadius="16" ShadowDepth="4" Direction="315"/>
+            </Border.Effect>
+        </Border>
+
+        <!-- Main Chamfered Dialog Box -->
+        <views:ChamferBorder Chamfer="20" ClipChild="True"
+                             Background="{StaticResource WindowBackgroundBrush}"
+                             BorderBrush="{StaticResource ChassisMilledBevelBrush}"
+                             InnerBevelBrush="{StaticResource ChassisInnerBevelBrush}"
+                             BorderThickness="3.0"
+                             SpecularTopHighlight="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <!-- Modal Header -->
+                <Border Grid.Row="0" BorderBrush="#1E86E0" BorderThickness="0,0,0,1.5"
+                        Background="{StaticResource HeaderBackgroundBrush}"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                    <Grid Height="46" Margin="18,0,12,0">
+                        <TextBlock x:Name="TitleBlock" Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   FontSize="15" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource ShellChromeButton}" HorizontalAlignment="Right"
+                                Click="Close_Click">
+                            <TextBlock Text="&#x2715;" FontSize="11" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold" Foreground="#B9C1D1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                </Border>
+                <!-- Modal Body -->
+                <StackPanel Grid.Row="1" Margin="24,20,24,20">
+                    <TextBlock x:Name="StatusText" Text="Mengunduh installer..." FontSize="13" FontFamily="{StaticResource CyberTechFont}" Foreground="#E8EAF0"/>
+
+                    <ProgressBar x:Name="DownloadBar" Height="6" Minimum="0" Maximum="100" Value="0"
+                                 Background="#141923" Foreground="#2596F8" BorderBrush="#2A3446" BorderThickness="1" Margin="0,14,0,0"/>
+
+                    <Grid Margin="0,8,0,0">
+                        <TextBlock x:Name="BytesText" Text="" FontSize="11" FontFamily="{StaticResource CyberTechFont}" Foreground="#8A93A5" HorizontalAlignment="Left"/>
+                        <TextBlock x:Name="PercentText" Text="0%" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" Foreground="#2596F8" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Button x:Name="CancelButton" Content="{Binding [S0010], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                            HorizontalAlignment="Right" Margin="0,18,0,0" Click="Cancel_Click"/>
+                </StackPanel>
+            </Grid>
+        </views:ChamferBorder>
+    </Grid>
+</Window>
+

@@ -1,0 +1,249 @@
+<Window x:Class="Keystream.Setup.UninstallWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Uninstall Keystream"
+        Width="500" Height="290"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="#0B0E14"
+        Foreground="#E6EDF3"
+        FontFamily="Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif"
+        Icon="app.ico">
+
+    <Window.Resources>
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#DC2626" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#B91C1C" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#991B1B" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#0284C7" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0369A1" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#075985" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#334155" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#475569" />
+                                <Setter Property="Foreground" Value="#E2E8F0" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0F172A" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="6" />
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="Foreground" Value="#EF4444" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}" CornerRadius="3" />
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate>
+                                                <Border Background="#EF4444" CornerRadius="3" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Main Content Area -->
+    <Grid Margin="24,22,24,20">
+
+        <!-- 1. CONFIRMATION & OPTIONS -->
+        <Grid x:Name="pnlConfirm" Visibility="Visible">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="txtUninstallTitle" Grid.Row="1" Text="Uninstall Keystream" FontSize="16" FontWeight="SemiBold" Foreground="#F1F5F9" Margin="0,0,0,14" />
+
+            <!-- Options Box -->
+            <Border Grid.Row="2" Background="#161F2E" BorderBrush="#253346" BorderThickness="1" CornerRadius="5" Padding="12,10">
+                <StackPanel>
+                    <CheckBox x:Name="chkCleanAppData" Content="Delete all user profiles &amp; icons (%APPDATA%\Keystream)"
+                              IsChecked="False" FontSize="12" Foreground="#F1F5F9" FontWeight="SemiBold" />
+                    <TextBlock x:Name="txtCleanAppDataHint" Text="Clears all saved macro bindings and button images."
+                               FontSize="11" Foreground="#64748B" Margin="22,2,0,10" />
+
+                    <CheckBox x:Name="chkUninstallDriver" Content="Uninstall Interception driver from system"
+                              IsChecked="False" FontSize="12" Foreground="#F1F5F9" FontWeight="SemiBold" />
+                    <TextBlock x:Name="txtUninstallDriverHint" Text="Removes keyboard filter driver. Requires administrator permission and PC restart."
+                               FontSize="11" Foreground="#64748B" Margin="22,2,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- Buttons -->
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnCancel" Content="Cancel" Width="85" Height="32" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,0" Click="btnCancel_Click" />
+                <Button x:Name="btnUninstall" Content="Uninstall Now" Width="120" Height="32" Style="{StaticResource DangerButtonStyle}" FontWeight="SemiBold" Click="btnUninstall_Click" />
+            </StackPanel>
+        </Grid>
+
+        <!-- 2. PROGRESS -->
+        <Grid x:Name="pnlProgress" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="txtUninstallingTitle" Grid.Row="1" Text="Uninstalling Keystream..." FontSize="16" FontWeight="SemiBold" Foreground="#F1F5F9" Margin="0,0,0,16" />
+            <ProgressBar Grid.Row="2" x:Name="pbUninstall" Style="{StaticResource ProgressBarStyle}" IsIndeterminate="True" Margin="0,0,0,10" />
+            <TextBlock Grid.Row="3" x:Name="txtStatus" Text="Closing Keystream..." FontSize="12" Foreground="#38BDF8" />
+        </Grid>
+
+        <!-- 3. FINISHED WITH RESTART OPTIONS -->
+        <Grid x:Name="pnlFinished" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Success Header (Cyber Glowing Badge) -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,14">
+                <Border Width="38" Height="38" CornerRadius="19" Margin="0,0,12,0" BorderThickness="1.5">
+                    <Border.BorderBrush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#38BDF8" Offset="0.0" />
+                            <GradientStop Color="#0284C7" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.BorderBrush>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#0F283D" Offset="0.0" />
+                            <GradientStop Color="#091827" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Path HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Data="M 1 7 L 6 12 L 15 2"
+                          Stroke="#38BDF8" StrokeThickness="2.5"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                          Margin="0,1,0,0" />
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="txtFinishedTitle" Text="Uninstall Complete" FontSize="16" FontWeight="Bold" Foreground="#F1F5F9" />
+                    <TextBlock x:Name="txtFinishedSubtitle" Text="Keystream has been removed from your computer." FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Driver Restart Box / Cleanup Warning -->
+            <StackPanel Grid.Row="2">
+                <Border x:Name="pnlDriverRestartNotice" Visibility="Collapsed"
+                        Background="#2E2310" BorderBrush="#D97706" BorderThickness="1" CornerRadius="5" Padding="12,10" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock x:Name="txtDriverRestartTitle" Text="⚠️ Restart Required" FontWeight="SemiBold" FontSize="12" Foreground="#FBBF24" />
+                        <TextBlock x:Name="txtDriverRestartBody" Text="The Interception driver has been removed. A computer restart is required to finalize changes to the Windows kernel filter driver."
+                                   FontSize="11" Foreground="#FDE68A" TextWrapping="Wrap" Margin="0,3,0,0" LineHeight="16" />
+                    </StackPanel>
+                </Border>
+                <Border x:Name="pnlCleanupWarning" Visibility="Collapsed"
+                        Background="#2E2310" BorderBrush="#D97706" BorderThickness="1" CornerRadius="5" Padding="12,10" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock x:Name="txtCleanupWarningTitle" Text="⚠️ Warning" FontWeight="SemiBold" FontSize="12" Foreground="#FBBF24" />
+                        <TextBlock x:Name="txtCleanupWarning" Text=""
+                                   FontSize="11" Foreground="#FDE68A" TextWrapping="Wrap" Margin="0,3,0,0" LineHeight="16" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Buttons Row -->
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnRestartLater" Visibility="Collapsed" Content="Restart Later" Width="100" Height="32" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,0" Click="btnRestartLater_Click" />
+                <Button x:Name="btnRestartNow" Visibility="Collapsed" Content="Restart Now" Width="130" Height="32" Style="{StaticResource DangerButtonStyle}" Background="#D97706" FontWeight="SemiBold" Click="btnRestartNow_Click" />
+                <Button x:Name="btnClose" Content="Close" Width="90" Height="32" Style="{StaticResource PrimaryButtonStyle}" FontWeight="SemiBold" Click="btnClose_Click" />
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</Window>

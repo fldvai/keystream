@@ -1,0 +1,1567 @@
+<Window WindowStyle="None" x:Class="Keystream.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Keystream.App.Views"
+        xmlns:loc="clr-namespace:Keystream.App.Localization"
+        Title="Keystream — Visual Macro Deck Controller" Height="730" Width="1180"
+        ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
+        AllowsTransparency="True" Background="Transparent"
+        Foreground="#E8EAF0"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.ClearTypeHint="Enabled"
+        Topmost="{Binding IsAlwaysOnTop, Mode=OneWay}"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        <views:HexShadeConverter x:Key="HexShade"/>
+        <views:NullToVisibilityConverter x:Key="NullVis"/>
+        <views:FileIconImageConverter x:Key="FileIconImage"/>
+        <Style x:Key="TileDeleteButton" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#8A93A5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <!-- ToolTip TIDAK di Setter: Binding tidak boleh di Setter.Value (WPF
+                 menolaknya saat style dipakai). Tooltip dipasang di satu-satunya
+                 pemakai style ini (tombol hapus tile, di bawah). -->
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="#33000000" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#B33939"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- §132: menu klik-kanan kartu (WPF ContextMenu, dibangun
+             code-behind per pembukaan agar header selalu bahasa aktif
+             dan tujuan salin/pindah selalu live). Placement dijepit
+             ke rect jendela (§133), Esc, dan navigasi keyboard.
+             MenuItem memakai template minimal sendiri agar highlight
+             mengikuti tema gelap aplikasi, bukan warna sistem. -->
+        <Style x:Key="CardContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="#1B2333"/>
+            <Setter Property="BorderBrush" Value="#3A465E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#E8ECF3"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="MinWidth" Value="210"/>
+            <!-- CornerRadius TIDAK bisa jadi Setter: ContextMenu tidak punya
+                 properti CornerRadius (setter itu akan gagal saat style
+                 diterapkan). Radius 10 hidup di Border template di bawah,
+                 mengikuti Gambar 1 / mockup revisi. -->
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Focusable="False">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="CardMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="#E8ECF3"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="10,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" ContentSource="Header" RecognizesAccessKey="False" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="&#x25B8;" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="#8A93A5">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasItems, RelativeSource={RelativeSource TemplatedParent}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="-4" VerticalOffset="-6"
+                                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                       AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                    <Border Background="#1B2333" BorderBrush="#3A465E" BorderThickness="1" CornerRadius="10" Padding="6" MinWidth="190">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#243049"/>
+                                <Setter Property="Foreground" Value="#E8ECF3"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#5A6478"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- §133: garis pemisah menu kartu (mockup revisi: 1px #2A3348,
+             margin 4,6, di antara "Pindahkan ke profil" dan "Ganti Nama").
+             Template sendiri agar garisnya pasti 1px apa pun tema sistem. -->
+        <Style x:Key="CardMenuSeparatorStyle" TargetType="Separator">
+            <Setter Property="Background" Value="#2A3348"/>
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="4,6"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Background="{TemplateBinding Background}" SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- GLOBAL button: vibrant blue solid hero button matching the stream deck mockup -->
+        <!-- GLOBAL button: 3D Master Rocker Key with Embedded ON/OFF Toggle -->
+        <Style x:Key="GlobalNavButton" TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <!-- Ambient Glow (Biru neon saat ON, Redup saat OFF) -->
+                            <Border x:Name="Glow" CornerRadius="7" Background="{Binding GlobalUnderglowBrush}"
+                                    Opacity="0.35" Margin="0,1,0,0">
+                                <Border.Effect>
+                                    <BlurEffect Radius="8"/>
+                                </Border.Effect>
+                            </Border>
+
+                            <!-- 3D Keycap Base (Biru saat ON, Abu-abu saat OFF) -->
+                            <Border x:Name="BaseBd" CornerRadius="6"
+                                    Background="{Binding GlobalChassisBackground}"
+                                    BorderBrush="{Binding GlobalChassisBorder}"
+                                    BorderThickness="1.2,1.2,2.5,2.5">
+                                <!-- Concave Face with Top Highlight -->
+                                <Border x:Name="FaceBd" Margin="1,1,1.5,2" CornerRadius="4"
+                                        Background="{Binding GlobalFaceBackground}"
+                                        BorderBrush="{Binding GlobalFaceBorder}"
+                                        BorderThickness="0.8">
+                                    <Grid>
+                                        <!-- Top Specular Highlight -->
+                                        <Border Height="14" VerticalAlignment="Top" CornerRadius="4,4,0,0" IsHitTestVisible="False">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                    <GradientStop Color="#FFFFFF" Offset="0"/>
+                                                    <GradientStop Color="Transparent" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Border.Opacity>0.12</Border.Opacity>
+                                        </Border>
+
+                                        <!-- Content Layer -->
+                                        <Grid Margin="10,0,6,0">
+                                            <!-- Left-aligned Icon & Title (Bukan di tengah) -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                <views:IconView Icon="globe" Width="13" Height="13"
+                                                                Foreground="{Binding GlobalTextForeground}"
+                                                                VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding [S0209], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="7,0,0,0" VerticalAlignment="Center"
+                                                           FontWeight="Bold" FontSize="11.5"
+                                                           Foreground="{Binding GlobalTextForeground}"
+                                                           FontFamily="{StaticResource CyberTechFont}"/>
+                                            </StackPanel>
+
+                                            <!-- Embedded Compact ON/OFF Rocker Switch (Sisi Kanan) -->
+                                            <Button Command="{Binding DataContext.ToggleGlobalEnabledCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                    Width="36" Height="20" Cursor="Hand" Margin="0,0,8,0"
+                                                    ToolTip="{Binding [S0210], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border CornerRadius="3"
+                                                                Background="{Binding DataContext.GlobalToggleBackground, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                BorderBrush="{Binding DataContext.GlobalToggleBorder, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding DataContext.GlobalToggleText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                       Foreground="{Binding DataContext.GlobalToggleForeground, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                       FontWeight="Bold" FontSize="9.5"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                       FontFamily="{StaticResource CyberTechFont}"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Glow" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="BaseBd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="RowIconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#8A93A5"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#25354D"/>
+                                <Setter Property="Foreground" Value="#5BE4FF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CompactProfileButton" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#222B3B" Offset="0"/>
+                        <GradientStop Color="#131722" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="BorderBrush" Value="#313E54"/>
+            <Setter Property="BorderThickness" Value="1,1,2,2"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="Glow" CornerRadius="5" Background="#1E86E0" Opacity="0" Margin="0,1,0,0">
+                                <Border.Effect>
+                                    <BlurEffect Radius="5"/>
+                                </Border.Effect>
+                            </Border>
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="5">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Glow" Property="Opacity" Value="0.35"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#5BE4FF"/>
+                                <Setter Property="Foreground" Value="#5BE4FF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SidebarActionButton" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#1E2536" Offset="0"/>
+                        <GradientStop Color="#121620" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="BorderBrush" Value="#2A354A"/>
+            <Setter Property="BorderThickness" Value="1.2"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <views:ChamferBorder x:Name="Bd" IsHexagon="True" Chamfer="7"
+                                             Background="{TemplateBinding Background}"
+                                             BorderBrush="{TemplateBinding BorderBrush}"
+                                             BorderThickness="1.0"
+                                             Padding="10,0" SpecularTopHighlight="False">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </views:ChamferBorder>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#242F42"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2585D8"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#0F121A"/>
+                                <Setter TargetName="Bd" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="#13161F"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Focusable="False">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Background="#1E86E0" CornerRadius="4" Margin="2,0"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter Property="Height" Value="12"/>
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
+                            </Trigger>
+                            <Trigger Property="Orientation" Value="Vertical">
+                                <Setter Property="Width" Value="10"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Outer Cyber-Deck Hardware Chassis with Thick Sculpted Bevels -->
+    <Grid Margin="10">
+        <!-- Shadow proxy: DropShadowEffect is isolated here so it does NOT
+             rasterize the entire window content into a blurry bitmap. -->
+        <Border CornerRadius="20" Background="#0E1016" Margin="3">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.85" BlurRadius="22" ShadowDepth="6" Direction="315"/>
+            </Border.Effect>
+        </Border>
+        <!-- Chassis content layer — no Effect, renders vector-crisp -->
+        <views:ChamferBorder Chamfer="32" ClipChild="True"
+                             Background="{StaticResource WindowBackgroundBrush}"
+                             BorderBrush="{StaticResource ChassisMilledBevelBrush}"
+                             InnerBevelBrush="{StaticResource ChassisInnerBevelBrush}"
+                             BorderThickness="3.5"
+                             SpecularTopHighlight="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="52"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="30"/>
+                </Grid.RowDefinitions>
+
+                <!-- HEADER -->
+                <!-- §154: wadah beku Mode Pilih (mode fokus) — Border ini
+                     + Border sidebar (SidebarRoot) + Grid baris judul
+                     (TitleRowRoot) adalah tiga wadah beku; handler preview
+                     + DataTrigger Opacity hidup di Style (tanpa
+                     IsEnabled=false: elemen disabled dilewati hit-testing
+                     WPF sehingga klik bisa jatuh ke dashboard dan keluar
+                     mode diam-diam). -->
+                <Border x:Name="HeaderRoot" Grid.Row="0"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown"
+                        PreviewMouseLeftButtonDown="SidebarFreeze_PreviewMouseLeftButtonDown"
+                        PreviewMouseRightButtonDown="SidebarFreeze_PreviewMouseRightButtonDown"
+                        PreviewKeyDown="SidebarFreeze_PreviewKeyDown">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="#1E86E0"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1.5"/>
+                            <Setter Property="Background" Value="{StaticResource HeaderBackgroundBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSelectMode}" Value="True">
+                                    <Setter Property="Opacity" Value="0.55"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <!-- Column 0 matches sidebar width exactly (226) -->
+                            <ColumnDefinition Width="226"/>
+                            <!-- Column 1 centers the 4 status indicators & action buttons -->
+                            <ColumnDefinition Width="*"/>
+                            <!-- Column 2 holds the window controls on the right -->
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Centered Main Title aligned to sidebar -->
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding [S0211], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="19" FontWeight="Bold"
+                                       Foreground="{StaticResource KeystreamTitleGradientBrush}"
+                                       FontFamily="{StaticResource CyberTitleFont}"
+                                       HorizontalAlignment="Center" TextAlignment="Center"/>
+                            <TextBlock Text="Visual Macro Deck Controller" FontSize="10" Foreground="#8A93A5" FontWeight="SemiBold"
+                                       FontFamily="{StaticResource CyberTechFont}" Margin="0,2,0,0"
+                                       HorizontalAlignment="Center" TextAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- 4 Uniform & Static Indicators and Buttons Centered -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- 1. Deck Indicator (Clickable Deck Status Button, §149) -->
+                            <Button Style="{StaticResource PillButton}" Command="{Binding OpenDeckStatusCommand}"
+                                    Width="130" Height="28" Padding="0" Margin="0,0,8,0">
+                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding DeckDot}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HeaderDeckText}" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+
+                            <!-- 2. OBS Indicator (Clickable Quick Config Button) -->
+                            <Button Style="{StaticResource PillButton}" Command="{Binding OpenObsConfigCommand}"
+                                    Width="130" Height="28" Padding="0" Margin="0,0,8,0" ToolTip="{Binding [S0213], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding ObsDot}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding HeaderObsText}" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+
+                            <!-- 3. Pilih Keyboard Button -->
+                            <Button Style="{StaticResource PillButton}" Command="{Binding OpenWizardCommand}"
+                                    Width="130" Height="28" Padding="0" Margin="0,0,8,0" ToolTip="{Binding [S0214], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <views:IconView Grid.Column="0" Icon="keyboard" Width="13" Height="13" VerticalAlignment="Center" Foreground="#E8EAF0" Margin="0,0,6,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding [S0215], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}"/>
+                                </Grid>
+                            </Button>
+
+                            <!-- 4. Pause Button (Single icon + simple text) -->
+                            <Button Style="{StaticResource PillButton}" Command="{Binding TogglePauseCommand}"
+                                    Width="130" Height="28" Padding="0" ToolTip="{Binding [S0216], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding PauseIconGlyph}" FontSize="10" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#E8EAF0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding PauseButtonText}" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" FontFamily="{StaticResource CyberTechFont}"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Right Window Controls: Language, Minimize, Close (no red circle, matches minimize) -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0">
+                            <!-- §86 language selector (Wave 1: 12 languages):
+                                 dropdown bound to the Localizer registry via
+                                 MainViewModel.LanguageOptions; closed display
+                                 shows ONLY the globe icon (no text, no code, no chevron)
+                                 - the 2-letter code appears in the dropdown
+                                 list itself (DisplayCode). Selection applies
+                                 immediately via MainViewModel.ApplyLanguage
+                                 (same SetLanguage + persist + swallow-save
+                                 order as the old toggle). LOCAL flat-chrome
+                                 template: the global ComboBox template
+                                 (App.xaml) is a boxed form control; this
+                                 override keeps the header slot flat like its
+                                 ShellChromeButton siblings. Thin (6px)
+                                 scrollbar in the popup: the dropdown is
+                                 very small. -->
+                            <ComboBox ItemsSource="{Binding LanguageOptions}"
+                                      SelectedValuePath="Code"
+                                      SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
+                                      Width="34" Height="32" Margin="0,0,2,0" VerticalAlignment="Center"
+                                      MaxDropDownHeight="240"
+                                      ToolTip="{Binding [S0217], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                <ComboBox.Resources>
+                                    <Style TargetType="ScrollBar">
+                                        <Setter Property="Width" Value="6"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ScrollBar">
+                                                    <Grid Background="Transparent">
+                                                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                                            <Track.DecreaseRepeatButton>
+                                                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/>
+                                                            </Track.DecreaseRepeatButton>
+                                                            <Track.IncreaseRepeatButton>
+                                                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/>
+                                                            </Track.IncreaseRepeatButton>
+                                                            <Track.Thumb>
+                                                                <Thumb x:Name="Thumb" Background="#3A4152" BorderThickness="0">
+                                                                    <Thumb.Template>
+                                                                        <ControlTemplate TargetType="Thumb">
+                                                                            <Border Background="{TemplateBinding Background}" CornerRadius="3"/>
+                                                                        </ControlTemplate>
+                                                                    </Thumb.Template>
+                                                                </Thumb>
+                                                            </Track.Thumb>
+                                                        </Track>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger SourceName="Thumb" Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Thumb" Property="Background" Value="#4A5570"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ComboBox.Resources>
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayCode}" FontSize="11" FontWeight="Bold" Foreground="#B9C1D1"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                                <ComboBox.Style>
+                                    <Style TargetType="ComboBox">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Foreground" Value="#B9C1D1"/>
+                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                        <Setter Property="FontSize" Value="11"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="FontFamily" Value="{StaticResource CyberTechFont}"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ComboBox">
+                                                    <Grid>
+                                                        <ToggleButton Focusable="False" ClickMode="Press"
+                                                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                                            <ToggleButton.Template>
+                                                                <ControlTemplate TargetType="ToggleButton">
+                                                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="4"/>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="Bd" Property="Background" Value="#333C52"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsChecked" Value="True">
+                                                                            <Setter TargetName="Bd" Property="Background" Value="#333C52"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </ToggleButton.Template>
+                                                        </ToggleButton>
+                                                        <views:IconView Icon="globe" Width="16" Height="16" Foreground="#B9C1D1"
+                                                                        HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" IsHitTestVisible="False"/>
+                                                        <Popup Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True"
+                                                               Focusable="False" PopupAnimation="Slide">
+                                                            <Border Background="#1B1F28" BorderBrush="#3A4152" BorderThickness="1" CornerRadius="6"
+                                                                    Width="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                    MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                                                <ScrollViewer SnapsToDevicePixels="True">
+                                                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                                </ScrollViewer>
+                                                            </Border>
+                                                        </Popup>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Opacity" Value="0.5"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ComboBox.Style>
+                            </ComboBox>
+                            <Button Style="{StaticResource ShellChromeButton}" Click="Minimize_Click" ToolTip="{Binding [S0218], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                <TextBlock Text="&#x2013;" FontSize="15" Foreground="#B9C1D1" Margin="0,-4,0,0"/>
+                            </Button>
+                            <Button Style="{StaticResource ShellChromeButton}" Click="Close_Click" ToolTip="{Binding [S0003], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                <TextBlock Text="&#x2715;" FontSize="11" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold" Foreground="#B9C1D1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- BODY -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="226"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- SIDEBAR -->
+                    <!-- §154: wadah beku Mode Pilih — Grid tunggal di dalam
+                         Border ini memegang SELURUH sidebar (5 baris); tanpa
+                         IsEnabled=false (alasan: lihat komentar §154 di
+                         HeaderRoot / MainWindow.xaml.cs). -->
+                    <Border x:Name="SidebarRoot" Grid.Column="0"
+                            PreviewMouseLeftButtonDown="SidebarFreeze_PreviewMouseLeftButtonDown"
+                            PreviewMouseRightButtonDown="SidebarFreeze_PreviewMouseRightButtonDown"
+                            PreviewKeyDown="SidebarFreeze_PreviewKeyDown">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="BorderBrush" Value="#202636"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                                <Setter Property="Background" Value="#13161F"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelectMode}" Value="True">
+                                        <Setter Property="Opacity" Value="0.55"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid Margin="10,10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <!-- 6 Action Buttons in a Micro-Tactile Switch Rail -->
+                            <Border Grid.Row="0" Background="#0C1017" BorderBrush="#1C2433" BorderThickness="1" CornerRadius="6" Padding="3,2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Style="{StaticResource CompactProfileButton}" Margin="0,0,2,0"
+                                            Command="{Binding AddProfileCommand}" ToolTip="{Binding [S0220], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                        <views:IconView Icon="plus" Width="12" Height="12"/>
+                                    </Button>
+                                    <Button Grid.Column="1" Style="{StaticResource CompactProfileButton}" Margin="0,0,2,0"
+                                            Command="{Binding EditProfileCommand}" ToolTip="{Binding [S0221], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                        <views:IconView Icon="edit" Width="12" Height="12"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Style="{StaticResource CompactProfileButton}" Margin="0,0,2,0"
+                                            Command="{Binding DeleteProfileCommand}" ToolTip="{Binding [S0222], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                        <views:IconView Icon="trash" Width="12" Height="12"/>
+                                    </Button>
+                                    <Button Grid.Column="3" Style="{StaticResource CompactProfileButton}" Margin="0,0,2,0"
+                                            Command="{Binding ImportProfileCommand}" ToolTip="{Binding [S0223], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                        <views:IconView Icon="download" Width="12" Height="12"/>
+                                    </Button>
+                                    <Button Grid.Column="4" Style="{StaticResource CompactProfileButton}" Margin="0,0,2,0"
+                                            Command="{Binding ExportProfileCommand}" ToolTip="{Binding [S0224], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                        <views:IconView Icon="upload" Width="12" Height="12"/>
+                                    </Button>
+                                    <Button Grid.Column="5" Style="{StaticResource CompactProfileButton}"
+                                            Command="{Binding ResetProfileCommand}" ToolTip="{Binding [S0225], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}">
+                                        <views:IconView Icon="refresh" Width="12" Height="12"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+
+                            <!-- Profile Cartridge Bay -->
+                            <Border Grid.Row="1" Margin="0,6,0,0"
+                                    Background="#0C1017" BorderBrush="#25354F" BorderThickness="1.2" CornerRadius="6">
+                                <ComboBox x:Name="ProfileComboBox" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
+                                          DisplayMemberPath="Name" ToolTip="{Binding SelectedProfile.Name}" MinHeight="32"
+                                          FontFamily="{StaticResource CyberTechFont}" FontSize="12" FontWeight="Bold"/>
+                            </Border>
+
+                            <!-- Master 3D Rocker Deck Key with Embedded ON/OFF Toggle -->
+                            <Button Grid.Row="2" Style="{StaticResource GlobalNavButton}" Height="34" Margin="0,6,0,0"
+                                    Command="{Binding OpenGlobalCommand}"
+                                    ToolTip="{Binding [S0226], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"/>
+
+                            <!-- Page Cartridge Rack -->
+                            <Border Grid.Row="3" Margin="0,6,0,0" Background="#0A0D14" BorderBrush="#1C2433" BorderThickness="1.2" CornerRadius="7" Padding="3">
+                                <ListBox x:Name="PageList" ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         Background="Transparent" BorderThickness="0"
+                                         Foreground="#E8EAF0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="4,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <views:MarqueeText Grid.Column="0" Text="{Binding Name}"
+                                                                   TextAlignment="Left" VerticalAlignment="Center"
+                                                                   Margin="0,0,6,0" FontSize="12.5"
+                                                                   FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Button Style="{StaticResource RowIconButton}" ToolTip="{Binding [S0227], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                                            Command="{Binding DataContext.EditPageCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                            CommandParameter="{Binding}">
+                                                        <views:IconView Icon="edit" Width="11" Height="11"/>
+                                                    </Button>
+                                                    <Button Style="{StaticResource RowIconButton}" ToolTip="{Binding [S0228], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="3,0,0,0"
+                                                            Command="{Binding DataContext.DeletePageCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                            CommandParameter="{Binding}">
+                                                        <views:IconView Icon="trash" Width="11" Height="11"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Padding" Value="7,6"/>
+                                            <Setter Property="Margin" Value="0,0,0,3"/>
+                                            <Setter Property="Foreground" Value="#CBD5E1"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ListBoxItem">
+                                                        <Grid>
+                                                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                                                    BorderBrush="#18202E" BorderThickness="1"
+                                                                    CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                <Grid>
+                                                                    <Border x:Name="ActiveLed" Width="3" HorizontalAlignment="Left" Margin="-7,-6,0,-6"
+                                                                            CornerRadius="2,0,0,2" Background="Transparent"/>
+                                                                    <ContentPresenter Margin="2,0,0,0"/>
+                                                                </Grid>
+                                                            </Border>
+                                                        </Grid>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="#171E2B"/>
+                                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2E3F59"/>
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                            </Trigger>
+                                                            <Trigger Property="IsSelected" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background">
+                                                                    <Setter.Value>
+                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                            <GradientStop Color="#1D2738" Offset="0"/>
+                                                                            <GradientStop Color="#121824" Offset="1"/>
+                                                                        </LinearGradientBrush>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2572BD"/>
+                                                                <Setter TargetName="ActiveLed" Property="Background" Value="#38BDF8"/>
+                                                                <Setter Property="Foreground" Value="#5BE4FF"/>
+                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                            </Trigger>
+                                                            <DataTrigger Binding="{Binding DataContext.IsEditingGlobal, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                                                <Setter TargetName="Bd" Property="BorderBrush" Value="Transparent"/>
+                                                                <Setter TargetName="ActiveLed" Property="Background" Value="Transparent"/>
+                                                                <Setter Property="Foreground" Value="#8A93A6"/>
+                                                                <Setter Property="FontWeight" Value="Normal"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </Border>
+
+                            <!-- Bottom Chamfer Deck Action Buttons -->
+                            <StackPanel Grid.Row="4" Margin="0,6,0,0">
+                                <Button Style="{StaticResource SidebarActionButton}"
+                                        Command="{Binding AddPageCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <views:IconView Icon="plus" Width="12" Height="12" VerticalAlignment="Center" Foreground="#38BDF8"/>
+                                        <TextBlock Text="{Binding [S0229], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource SidebarActionButton}"
+                                        Command="{Binding OpenMacroCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <views:IconView Icon="zap" Width="12" Height="12" VerticalAlignment="Center" Foreground="#4ADE80"/>
+                                        <TextBlock Text="{Binding [S0180], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource SidebarActionButton}"
+                                        Command="{Binding OpenSettingsCommand}" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal">
+                                        <views:IconView Icon="gear" Width="12" Height="12" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                                        <TextBlock Text="{Binding [S0230], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- MAIN CONTENT -->
+                    <Grid Grid.Column="1" Margin="14,10,12,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <!-- §171: banner kuning "Editing Global Mode"
+                             DIBUANG seluruhnya (elemen + baris Grid-nya).
+                             Mode edit Global sendiri tidak berubah -
+                             hanya visual banner yang hilang. -->
+                        <!-- Title Row: Clean, compact proportion -->
+                        <!-- §154: wadah beku Mode Pilih — Grid baris judul ini
+                             memegang pensil rename + kotak cari + segmen
+                             Grid/List + "+ Template" + "+ Petakan Tombol".
+                             Bar Mode Pilih (Grid.Row 2) adalah SAUDARA Grid
+                             ini, bukan keturunannya, jadi tidak ikut beku. -->
+                        <Grid x:Name="TitleRowRoot" Grid.Row="1"
+                              PreviewMouseLeftButtonDown="SidebarFreeze_PreviewMouseLeftButtonDown"
+                              PreviewMouseRightButtonDown="SidebarFreeze_PreviewMouseRightButtonDown"
+                              PreviewKeyDown="SidebarFreeze_PreviewKeyDown">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Margin" Value="0,0,0,8"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelectMode}" Value="True">
+                                            <Setter Property="Opacity" Value="0.55"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <!-- §124: kolom 1 (*) = kotak cari dashboard —
+                                 mengisi ruang kosong antara judul halaman
+                                 dan segmen Grid/List; kolom 0/2 Auto
+                                 sehingga judul + tombol kanan tidak
+                                 berpindah/berubah ukuran.
+                                 §131: lebar tetap §129 DIBATALKAN — kotak
+                                 kembali mengisi kolom * seperti §124. -->
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" VerticalAlignment="Center">
+                                <StackPanel x:Name="TitleView" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <views:IconView Icon="globe" Width="18" Height="18" Foreground="#1E86E0" VerticalAlignment="Center"
+                                                    Margin="0,0,8,0" Visibility="{Binding IsEditingGlobal, Converter={StaticResource BoolVis}}"/>
+                                    <TextBlock x:Name="PageTitleText" Text="{Binding DisplayedPageName}" FontSize="18" FontWeight="Bold" Foreground="White"
+                                               FontFamily="{StaticResource CyberTechFont}" Cursor="Hand" MouseLeftButtonDown="PageTitle_MouseLeftButtonDown"
+                                               ToolTip="{Binding [S0234], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"/>
+                                    <views:IconView Icon="edit" Width="12" Height="12" Foreground="#8A93A5" VerticalAlignment="Center"
+                                                    Margin="8,0,0,0" Cursor="Hand" MouseLeftButtonDown="PageTitle_MouseLeftButtonDown"
+                                                    Visibility="{Binding CanRenamePage, Converter={StaticResource BoolVis}}"/>
+                                </StackPanel>
+                            </Grid>
+                            <!-- §124 butir 2: kotak cari dashboard — live
+                                 filter saat mengetik (PropertyChanged).
+                                 Placeholder = S0255, SAMA seperti
+                                 FilterBox di SearchablePanelPicker
+                                 (watermark via Tag di template global
+                                 TextBox); tombol × di dalam box juga
+                                 dari template global itu (ClearBtn),
+                                 tanpa tombol tambahan. Esc menghapus
+                                 teks: EnableEscapeRestore="False"
+                                 (pola FilterBox §110) + handler
+                                 KeyDown di code-behind. -->
+                            <!-- §131: REVERT §129 — lebar fleksibel seperti
+                                 §124: kotak mengisi kolom * (sisa ruang),
+                                 tanpa celah kosong di kanan kotak. Width
+                                 tetap §129 DIBATALKAN atas perintah user.
+                                 Margin + perilaku filter tidak berubah. -->
+                            <TextBox x:Name="DashboardSearchBox" Grid.Column="1"
+                                     Text="{Binding DashboardSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Tag="{Binding [S0255], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                     Height="30" MinWidth="120" Margin="16,0,12,0" VerticalAlignment="Center"
+                                     KeyDown="DashboardSearchBox_KeyDown"
+                                     views:TextBoxRevert.EnableEscapeRestore="False"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CaptureHint}" Foreground="#FFC65C" VerticalAlignment="Center" Margin="0,0,10,0" MaxWidth="280" TextWrapping="Wrap" FontFamily="{StaticResource CyberTechFont}"/>
+                                <!-- §90: toggle segmen Grid/List — segmen aktif
+                                     biru #1E86E0 sehingga status view terlihat
+                                     tanpa klik; satu klik untuk pindah, tanpa
+                                     dropdown. Mode tersimpan di Pengaturan. -->
+                                <Border BorderBrush="#3D4B63" BorderThickness="1" CornerRadius="6" Height="30" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Command="{Binding SetDashboardViewModeCommand}" CommandParameter="grid" Cursor="Hand" FontFamily="{StaticResource CyberTechFont}" FontSize="11.5" MinWidth="84">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="#CBD5E1"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="12,0"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="5,0,0,5">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#252B38"/>
+                                                        </Trigger>
+                                                        <DataTrigger Binding="{Binding IsGridView}" Value="True">
+                                                            <Setter Property="Background" Value="#1E86E0"/>
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <views:IconView Icon="grid" Width="13" Height="13" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding [S1550], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1" Command="{Binding SetDashboardViewModeCommand}" CommandParameter="list" Cursor="Hand" FontFamily="{StaticResource CyberTechFont}" FontSize="11.5" MinWidth="84">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="#CBD5E1"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="12,0"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="0,5,5,0">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#252B38"/>
+                                                        </Trigger>
+                                                        <DataTrigger Binding="{Binding IsListView}" Value="True">
+                                                            <Setter Property="Background" Value="#1E86E0"/>
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <views:IconView Icon="list" Width="13" Height="13" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding [S1551], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                <!-- §80: ikon grid oranye dihapus atas
+                                     perintah user — tombol kini teks saja
+                                     ("+ Template"), sejajar dengan
+                                     "+ Petakan Tombol Baru". -->
+                                <Button Style="{StaticResource GhostButton}" Command="{Binding OpenTemplatePickerCommand}" Height="30" Padding="12,0" FontFamily="{StaticResource CyberTechFont}" FontSize="11.5" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding [S0236], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Style="{StaticResource PrimaryButton}" Command="{Binding ArmCaptureCommand}" Height="30" Padding="12,0" FontFamily="{StaticResource CyberTechFont}" FontSize="11.5" FontWeight="Bold">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="+" FontSize="14" FontWeight="Bold" Margin="0,-1,5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding [S0237], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Keycap Grid: Exactly 5 cards wide, 3 cards high visible, scrollable if > 15 -->
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,2,0,0">
+                            <!-- §132: klik area kosong grid ini menghapus seleksi
+                                 (handler membedakan klik kartu lewat
+                                 DataContext yang diwarisi template). -->
+                            <Grid MouseLeftButtonDown="DashboardEmptyArea_MouseLeftButtonDown">
+                            <ItemsControl ItemsSource="{Binding Bindings}" Width="880" HorizontalAlignment="Left" Visibility="{Binding IsGridView, Converter={StaticResource BoolVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- §132: klik kiri membuka editor
+                                             (handler di MainWindow.xaml.cs,
+                                             dengan penjaga tombol-dalam);
+                                             klik kanan = seleksi + menu
+                                             konteks kartu. -->
+                                        <Grid Width="164" Height="164" Margin="6" MouseLeftButtonDown="Tile_MouseLeftButtonDown" MouseRightButtonDown="Tile_MouseRightButtonDown">
+                                            <!-- Layer 0: Ambient Backlight RGB Glow under the physical keycap -->
+                                            <Border CornerRadius="14" Margin="3,6,3,1"
+                                                    Background="{Binding BackgroundColor, Converter={StaticResource HexGradient}}"
+                                                    Opacity="0.25">
+                                                <Border.Effect>
+                                                    <BlurEffect Radius="14"/>
+                                                </Border.Effect>
+                                            </Border>
+
+                                            <!-- Layer 1: Mechanical Keycap Base Shadow (Gives 3D elevation from the chassis) -->
+                                            <Border CornerRadius="12" Background="#06080E" Margin="2,4,2,0">
+                                                <Border.Effect>
+                                                    <DropShadowEffect Color="Black" Opacity="0.85" BlurRadius="10" ShadowDepth="4" Direction="315"/>
+                                                </Border.Effect>
+                                            </Border>
+
+                                            <!-- Layer 2: 3D Keycap Chassis & Chamfer Border (Pixel-crisp, no blur effect) -->
+                                            <views:ChamferBorder Chamfer="14" Cursor="Hand"
+                                                                 BorderThickness="2.2"
+                                                                 InnerBevelBrush="{StaticResource CardInnerBevelBrush}"
+                                                                 SpecularTopHighlight="True"
+                                                                 Background="{Binding BackgroundColor, Converter={StaticResource HexGradient}}">
+                                                <views:ChamferBorder.Style>
+                                                    <Style TargetType="views:ChamferBorder">
+                                                        <Setter Property="BorderBrush" Value="{StaticResource CardMilledBevelBrush}"/>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#38BDF8"/>
+                                                            </Trigger>
+                                                            <!-- §132: urutan trigger border — hover,
+                                                                 lalu seleksi (menang atas hover), lalu
+                                                                 IsFlashing TERAKHIR (kilau eksekusi
+                                                                 menang atas semua). IsInactive TIDAK
+                                                                 bersaing untuk border: ia hanya
+                                                                 mengatur Opacity di bawah, jadi kartu
+                                                                 nonaktif yang terseleksi tetap
+                                                                 berbingkai BIRU dan redup sekaligus. -->
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#1E86E0"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsInactive}" Value="True">
+                                                                <Setter Property="Opacity" Value="0.55"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsFlashing}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#5BE4FF"/>
+                                                                <Setter Property="Background" Value="#1C385C"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </views:ChamferBorder.Style>
+
+                                                <Grid>
+                                                    <!-- Keycap Glass Reflection Overlay (Acrylic Lens) -->
+                                                    <Border Height="42" VerticalAlignment="Top" CornerRadius="12,12,0,0" Margin="2,2,2,0" IsHitTestVisible="False">
+                                                        <Border.Background>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                <GradientStop Color="#FFFFFF" Offset="0"/>
+                                                                <GradientStop Color="#FFFFFF" Offset="0.08"/>
+                                                                <GradientStop Color="Transparent" Offset="1"/>
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                        <Border.Opacity>0.07</Border.Opacity>
+                                                    </Border>
+
+                                                    <Grid Margin="10,8,10,8">
+                                                        <!-- Top Row: 3D Keycap Identical to Gambar 2 on Left, Delete & Conflict on Right -->
+                                                        <Grid VerticalAlignment="Top">
+                                                            <Button HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                    Command="{Binding DataContext.ChangeBindingKeyCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip="{Binding [S0238], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                                                    Cursor="Hand">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <!-- Keycap Outer Chassis Base (Gives 3D depth and bottom shadow) -->
+                                                                        <Border x:Name="KeyBase" CornerRadius="4"
+                                                                                Background="#10131C" BorderBrush="#222B3A" BorderThickness="1,1,1,2"
+                                                                                Height="24" MinWidth="28">
+                                                                            <!-- Keycap Top Dish / Face (Elevated with subtle specular gradient) -->
+                                                                            <Border x:Name="KeyFace" CornerRadius="3"
+                                                                                    Margin="1,1,1,1"
+                                                                                    BorderBrush="#3D4B63" BorderThickness="1"
+                                                                                    Padding="6,1">
+                                                                                <Border.Background>
+                                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                                        <GradientStop Color="#2C374A" Offset="0.0"/>
+                                                                                        <GradientStop Color="#1A212E" Offset="1.0"/>
+                                                                                    </LinearGradientBrush>
+                                                                                </Border.Background>
+                                                                                <Viewbox MaxWidth="44" MaxHeight="13" Stretch="Uniform">
+                                                                                    <TextBlock x:Name="KeyText" Text="{Binding KeyCapBadge}"
+                                                                                               FontSize="11" FontWeight="Bold"
+                                                                                               Foreground="#E0E6F0"
+                                                                                               FontFamily="{StaticResource CyberTechFont}"
+                                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                                </Viewbox>
+                                                                            </Border>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="KeyFace" Property="Background">
+                                                                                    <Setter.Value>
+                                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                                            <GradientStop Color="#38465D" Offset="0.0"/>
+                                                                                            <GradientStop Color="#232B3B" Offset="1.0"/>
+                                                                                        </LinearGradientBrush>
+                                                                                    </Setter.Value>
+                                                                                </Setter>
+                                                                                <Setter TargetName="KeyFace" Property="BorderBrush" Value="#5B7093"/>
+                                                                                <Setter TargetName="KeyText" Property="Foreground" Value="#FFFFFF"/>
+                                                                            </Trigger>
+                                                                            <Trigger Property="IsPressed" Value="True">
+                                                                                <Setter TargetName="KeyFace" Property="RenderTransform">
+                                                                                    <Setter.Value>
+                                                                                        <TranslateTransform Y="1"/>
+                                                                                    </Setter.Value>
+                                                                                </Setter>
+                                                                                <Setter TargetName="KeyFace" Property="Background">
+                                                                                    <Setter.Value>
+                                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                                            <GradientStop Color="#181F2B" Offset="0.0"/>
+                                                                                            <GradientStop Color="#121721" Offset="1.0"/>
+                                                                                        </LinearGradientBrush>
+                                                                                    </Setter.Value>
+                                                                                </Setter>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                            </Button>
+
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                                <views:IconView Icon="alert" Width="13" Height="13" Foreground="#FFC65C" Margin="0,2,5,0"
+                                                                                ToolTip="{Binding ConflictText}"
+                                                                                Visibility="{Binding HasConflict, Converter={StaticResource BoolVis}}"/>
+                                                                <Button Style="{StaticResource TileDeleteButton}" Width="20" Height="20" ToolTip="{Binding [S0208], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                                                        Command="{Binding DataContext.DeleteBindingCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <TextBlock Text="&#x2715;" FontSize="9.5" Foreground="#8A93A5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Button>
+                                                            </StackPanel>
+                                                        </Grid>
+
+                                                        <!-- 1 Paket Terpusat: ICON + JUDUL + DETAIL -->
+                                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,8,0,0">
+                                                            <!-- §57: backdrop kotak (medallion §54–§55) DIBUANG —
+                                                                 semua ikon kembali tampil langsung di wajah kartu.
+                                                                 Ikon bawaan kembali bertinta adaptif (HexInk) seperti
+                                                                 §53, karena tidak ada lagi chip gelap di bawahnya.
+                                                                 Garis bisu mic di posisi aslinya. -->
+                                                            <Grid Width="50" Height="50" HorizontalAlignment="Center" Margin="0,0,0,4">
+                                                                <Image Source="{Binding FileIconPath, Converter={StaticResource FileIconImage}}" Width="46" Height="46" RenderOptions.BitmapScalingMode="HighQuality"
+                                                                       Visibility="{Binding HasFileIcon, Converter={StaticResource BoolVis}}"/>
+                                                                <views:IconView Icon="{Binding TileIconKey}" Width="46" Height="46" Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}}"
+                                                                                Visibility="{Binding TileIconKey, Converter={StaticResource NullVis}}"/>
+                                                                <TextBlock Text="{Binding IconGlyph}" FontSize="40" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}}"
+                                                                           Visibility="{Binding ShowGlyph, Converter={StaticResource BoolVis}}"/>
+                                                                <Path Data="M5 45 L45 5" Stroke="#F87171" StrokeThickness="4"
+                                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                                      Visibility="{Binding IsMicMuted, Converter={StaticResource BoolVis}}"/>
+                                                                <!-- §133 M2: lingkaran angka urutan di tengah
+                                                                     kartu, HANYA dalam Mode Pilih + terseleksi
+                                                                     (ShowSelectionNumber); menutupi ikon selama
+                                                                     mode aktif. Di luar mode: tanpa angka,
+                                                                     tanpa centang — hanya highlight border. -->
+                                                                <Border Width="46" Height="46" CornerRadius="23" Background="#1E86E0"
+                                                                        HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                                                                        Visibility="{Binding ShowSelectionNumber, Converter={StaticResource BoolVis}}">
+                                                                    <TextBlock Text="{Binding SelectionIndex}" FontSize="21" FontWeight="Bold" Foreground="White"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </Grid>
+
+                                                            <!-- Running Text Title + Detail -->
+                                                            <views:MarqueeText Text="{Binding DisplayLabel}" FontSize="13" FontWeight="Bold"
+                                                                               TextAlignment="Center"
+                                                                               Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}}" FontFamily="{StaticResource CyberTechFont}"
+                                                                               HorizontalAlignment="Stretch" Margin="0,0,0,1"/>
+                                                            <TextBlock Text="{Binding DetailText}" FontSize="9.5" Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}, ConverterParameter=muted}"
+                                                                       Opacity="0.85" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                       FontFamily="{StaticResource CyberTechFont}"
+                                                                       Visibility="{Binding HasDetail, Converter={StaticResource BoolVis}}"
+                                                                       Margin="0,0,0,0"/>
+                                                            <!-- §132: label Nonaktif (S1693), hanya untuk
+                                                                 kartu nonaktif; di dalam tumpukan tengah
+                                                                 seperti DetailText, tanpa ubah ukuran kartu. -->
+                                                            <TextBlock Text="{Binding [S1693], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="9.5" FontWeight="Bold" Foreground="#FFC65C"
+                                                                       HorizontalAlignment="Center" FontFamily="{StaticResource CyberTechFont}"
+                                                                       Visibility="{Binding IsInactive, Converter={StaticResource BoolVis}}"
+                                                                       Margin="0,1,0,0"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Grid>
+                                            </views:ChamferBorder>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- §90: List view — baris padat dengan detail penuh
+                                 (DetailText utuh + teks konflik, bukan cuma badge).
+                                 Koleksi, klik-edit, ubah-tombol, dan hapus SAMA
+                                 dengan grid; hanya presentasinya berbeda. -->
+                            <ItemsControl ItemsSource="{Binding Bindings}" Width="880" HorizontalAlignment="Center" Visibility="{Binding IsListView, Converter={StaticResource BoolVis}}" Grid.IsSharedSizeScope="True">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- §93: baris = plat 3D seperti kartu — pelat
+                                             bayangan hexagon + pelat utama gradien warna
+                                             tile + bevel dalam + kilau atas + lensa kaca.
+                                             Tile Color kini berpengaruh penuh di list
+                                             (dulu hanya aksen 4px). Perbaikan §91: warna
+                                             dasar border pindah ke Style setter — BorderBrush
+                                             lokal sebelumnya mengalahkan trigger hover. -->
+                                        <!-- §133: klik kiri membuka editor
+                                             (handler yang sama dengan grid);
+                                             klik kanan = seleksi + menu
+                                             konteks kartu. -->
+                                        <Grid Margin="0,0,0,6" MouseLeftButtonDown="Tile_MouseLeftButtonDown" MouseRightButtonDown="Tile_MouseRightButtonDown">
+                                            <views:ChamferBorder IsHexagon="True" Chamfer="9" BorderThickness="0" Background="#06080E" Margin="2,3,2,0">
+                                                <views:ChamferBorder.Effect>
+                                                    <DropShadowEffect Color="Black" Opacity="0.85" BlurRadius="10" ShadowDepth="4" Direction="315"/>
+                                                </views:ChamferBorder.Effect>
+                                            </views:ChamferBorder>
+                                            <views:ChamferBorder IsHexagon="True" Chamfer="9" BorderThickness="1.0" Background="{Binding BackgroundColor, Converter={StaticResource HexGradient}}" ClipChild="True" SpecularTopHighlight="True" InnerBevelBrush="{StaticResource CardInnerBevelBrush}" Padding="10,8" Cursor="Hand">
+                                            <views:ChamferBorder.Style>
+                                                <Style TargetType="views:ChamferBorder">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource CardMilledBevelBrush}"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="BorderBrush" Value="#38BDF8"/>
+                                                        </Trigger>
+                                                        <!-- §132: urutan sama dengan grid — seleksi
+                                                             menang atas hover; IsInactive hanya
+                                                             Opacity (independen), jadi baris nonaktif
+                                                             yang terseleksi tetap berbingkai + redup.
+                                                             List tidak punya trigger IsFlashing
+                                                             (kilau hanya di grid, seperti semula). -->
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="#1E86E0"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsInactive}" Value="True">
+                                                            <Setter Property="Opacity" Value="0.55"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </views:ChamferBorder.Style>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <!-- §92: kolom badge berbagi lebar (SharedSizeGroup)
+                                                         agar semua judul mulai di x yang sama seperti
+                                                         kolom tabel — sebelumnya Auto per baris: badge
+                                                         "C" sempit, "SPACE" lebar, judul tidak sejajar. -->
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="KeyBadge"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Lensa kaca seperti kartu (§57): kilau putih tipis
+                                                     di atas pelat; di belakang konten + tembus klik. -->
+                                                <Border Grid.ColumnSpan="5" Height="14" VerticalAlignment="Top" IsHitTestVisible="False" Opacity="0.07">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                            <GradientStop Color="#FFFFFF" Offset="0"/>
+                                                            <GradientStop Color="#FFFFFF" Offset="0.08"/>
+                                                            <GradientStop Color="Transparent" Offset="1"/>
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                </Border>
+                                                <!-- §101: ikon digeser 8px ke kanan (Margin kiri
+                                                     0 → 8). Akar potongan ikon: pelat utama list
+                                                     memakai ClipChild=True dengan klip hexagon
+                                                     (ChamferBorder.cs:145-149, klip dalam koordinat
+                                                     anak) — sisi miring hexagon memotong ±5px sudut
+                                                     kiri ikon yang duduk di x=0 anak. Margin 8 ini
+                                                     menggeser SELURUH isi baris ke kanan (kolom ikon
+                                                     Auto ikut melebar) sekaligus mengeluarkan ikon
+                                                     dari zona miring klip. Padding pelat TIDAK bisa
+                                                     memperbaiki ini karena klip relatif terhadap anak,
+                                                     bukan terhadap pelat. -->
+                                                <Grid Grid.Column="0" Width="24" Height="24" Margin="8,0,10,0" VerticalAlignment="Center">
+                                                    <Image Source="{Binding FileIconPath, Converter={StaticResource FileIconImage}}" Width="24" Height="24" RenderOptions.BitmapScalingMode="HighQuality" Visibility="{Binding HasFileIcon, Converter={StaticResource BoolVis}}"/>
+                                                    <views:IconView Icon="{Binding TileIconKey}" Width="24" Height="24" Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}}" Visibility="{Binding TileIconKey, Converter={StaticResource NullVis}}"/>
+                                                    <TextBlock Text="{Binding IconGlyph}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}}" Visibility="{Binding ShowGlyph, Converter={StaticResource BoolVis}}"/>
+                                                    <!-- §133 M2: lingkaran angka urutan di tengah sel
+                                                         ikon, HANYA dalam Mode Pilih + terseleksi
+                                                         (ShowSelectionNumber); menutupi ikon selama
+                                                         mode aktif. Di luar mode: tanpa angka. -->
+                                                    <Border Width="22" Height="22" CornerRadius="11" Background="#1E86E0"
+                                                            HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"
+                                                            Visibility="{Binding ShowSelectionNumber, Converter={StaticResource BoolVis}}">
+                                                        <TextBlock Text="{Binding SelectionIndex}" FontSize="11" FontWeight="Bold" Foreground="White"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </Grid>
+                                                <!-- §93 (interupsi): badge tombol disamakan dengan
+                                                     keycap 3D kartu grid — KeyBase + KeyFace +
+                                                     efek hover/pressed yang sama persis. -->
+                                                <Button Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="{Binding [S0238], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Cursor="Hand" Command="{Binding DataContext.ChangeBindingKeyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="KeyBase" CornerRadius="4"
+                                                                    Background="#10131C" BorderBrush="#222B3A" BorderThickness="1,1,1,2"
+                                                                    Height="24" MinWidth="28">
+                                                                <Border x:Name="KeyFace" CornerRadius="3"
+                                                                        Margin="1,1,1,1"
+                                                                        BorderBrush="#3D4B63" BorderThickness="1"
+                                                                        Padding="6,1">
+                                                                    <Border.Background>
+                                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                            <GradientStop Color="#2C374A" Offset="0.0"/>
+                                                                            <GradientStop Color="#1A212E" Offset="1.0"/>
+                                                                        </LinearGradientBrush>
+                                                                    </Border.Background>
+                                                                    <Viewbox MaxWidth="44" MaxHeight="13" Stretch="Uniform">
+                                                                        <TextBlock x:Name="KeyText" Text="{Binding KeyCapBadge}"
+                                                                                   FontSize="11" FontWeight="Bold"
+                                                                                   Foreground="#E0E6F0"
+                                                                                   FontFamily="{StaticResource CyberTechFont}"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Viewbox>
+                                                                </Border>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="KeyFace" Property="Background">
+                                                                        <Setter.Value>
+                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                                <GradientStop Color="#38465D" Offset="0.0"/>
+                                                                                <GradientStop Color="#232B3B" Offset="1.0"/>
+                                                                            </LinearGradientBrush>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                    <Setter TargetName="KeyFace" Property="BorderBrush" Value="#5B7093"/>
+                                                                    <Setter TargetName="KeyText" Property="Foreground" Value="#FFFFFF"/>
+                                                                </Trigger>
+                                                                <Trigger Property="IsPressed" Value="True">
+                                                                    <Setter TargetName="KeyFace" Property="RenderTransform">
+                                                                        <Setter.Value>
+                                                                            <TranslateTransform Y="1"/>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                    <Setter TargetName="KeyFace" Property="Background">
+                                                                        <Setter.Value>
+                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                                <GradientStop Color="#181F2B" Offset="0.0"/>
+                                                                                <GradientStop Color="#121721" Offset="1.0"/>
+                                                                            </LinearGradientBrush>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                    <TextBlock Text="{Binding DisplayLabel}" FontSize="13.5" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}}" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding DetailText}" FontSize="11.5" Foreground="{Binding BackgroundColor, Converter={StaticResource HexInk}, ConverterParameter=muted}" Opacity="0.85" FontFamily="{StaticResource CyberTechFont}" TextWrapping="Wrap" Visibility="{Binding HasDetail, Converter={StaticResource BoolVis}}"/>
+                                                    <TextBlock Text="{Binding ConflictText}" FontSize="11.5" Foreground="#FFC65C" FontFamily="{StaticResource CyberTechFont}" TextWrapping="Wrap" Visibility="{Binding HasConflict, Converter={StaticResource BoolVis}}"/>
+                                                    <!-- §132: label Nonaktif (S1693) di bawah teks
+                                                         konflik, kolom * yang sama — tanpa ubah
+                                                         SharedSizeGroup. -->
+                                                    <TextBlock Text="{Binding [S1693], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="11.5" FontWeight="Bold" Foreground="#FFC65C" FontFamily="{StaticResource CyberTechFont}" TextWrapping="Wrap" Visibility="{Binding IsInactive, Converter={StaticResource BoolVis}}"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="4" Style="{StaticResource TileDeleteButton}" Width="20" Height="20" ToolTip="{Binding [S0208], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" Command="{Binding DataContext.DeleteBindingCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                                                    <TextBlock Text="&#x2715;" FontSize="9.5" Foreground="#8A93A5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
+                                            </Grid>
+                                        </views:ChamferBorder>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            </Grid>
+                        </ScrollViewer>
+                        <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Visibility="{Binding HasNoBindings, Converter={StaticResource BoolVis}}">
+                            <views:IconView Icon="keyboard" Width="44" Height="44" Foreground="#474F61" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding [S0239], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" FontSize="15" FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                            <TextBlock Text="{Binding [S0240], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                       Opacity="0.6" HorizontalAlignment="Center" Margin="0,4,0,0" FontSize="12.5" FontFamily="{StaticResource CyberTechFont}"/>
+                        </StackPanel>
+                        <!-- §133 M5: bar pendek Mode Pilih — HANYA dalam mode
+                             (Visibility = IsSelectMode); overlay di sel yang sama
+                             dengan ScrollViewer (Grid.Row 2), tidak menambah
+                             baris. Tanpa chip "Esc untuk keluar" (kunci chip
+                             Esc tidak dipakai di bar; fungsi Esc tetap). Tanpa tombol
+                             Urungkan. Label via LocSource; panah ▾ menempel
+                             pada teks tombol salin/pindah. Handler dropdown +
+                             command adalah kontrak dengan Pekerja E. -->
+                        <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10"
+                                Background="#131722" BorderBrush="#1E86E0" BorderThickness="1.2" CornerRadius="8" Padding="12,8"
+                                Visibility="{Binding IsSelectMode, Converter={StaticResource BoolVis}}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedCountText}" FontSize="12.5" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                <Button Style="{StaticResource GhostButton}" Click="BulkCopyButton_Click" Margin="0,0,6,0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding [S1708], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                                        <TextBlock Text=" ▾" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource GhostButton}" Click="BulkMoveButton_Click" Margin="0,0,6,0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding [S1709], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                                        <TextBlock Text=" ▾" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource GhostButton}" Command="{Binding ToggleSelectedActiveCommand}" Margin="0,0,6,0">
+                                    <TextBlock Text="{Binding BulkToggleText}" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Style="{StaticResource PrimaryButton}" Command="{Binding DeleteSelectedCommand}" Margin="0,0,6,0">
+                                    <TextBlock Text="{Binding [S0184], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Style="{StaticResource GhostButton}" Command="{Binding ExitSelectModeCommand}" Margin="0,0,6,0">
+                                    <TextBlock Text="{Binding [S0010], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}" VerticalAlignment="Center"/>
+                                </Button>
+                                <Button Style="{StaticResource GhostButton}" Command="{Binding SelectAllVisibleCommand}">
+                                    <TextBlock Text="{Binding SelectAllButtonText}" VerticalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- STATUS BAR (CyberDeck Telemetry HUD) -->
+                <Border Grid.Row="2" BorderBrush="#1C2230" BorderThickness="0,1,0,0" Background="#0C0E14">
+                    <Grid Margin="24,0,24,0">
+                        <!-- Left: Dynamic Telemetry Indicator & Notification Ticker -->
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <!-- Dual-Layer Glowing LED Dot -->
+                                <Grid VerticalAlignment="Center" Margin="0,0,9,0">
+                                    <Ellipse Width="13" Height="13" Fill="{Binding StatusDotColor}" Opacity="0.25"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Ellipse Width="6.5" Height="6.5" Fill="{Binding StatusDotColor}"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" FontSize="11.5"
+                                           Foreground="#BAC4D6" FontFamily="{StaticResource CyberTechFont}" FontWeight="SemiBold"/>
+                                <!-- §134 C1: Urungkan hapus massal — perilaku = command undo
+                                     yang sudah ada. Collapsed saat tidak ada snapshot, jadi footer
+                                     identik §133 saat tersembunyi; diletakkan SETELAH StatusText agar
+                                     titik + teks tidak bergeser saat tombol muncul. -->
+                                <Button Style="{StaticResource GhostButton}" Height="24" Padding="10,1" Margin="9,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding UndoBulkDeleteCommand}"
+                                        Visibility="{Binding CanRestoreUndo, Converter={StaticResource BoolVis}}">
+                                    <TextBlock Text="{Binding [S0428], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                               FontSize="11" FontFamily="{StaticResource CyberTechFont}" VerticalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                            <!-- Baris hasil browser yang menetap (temuan riset 3):
+                                 hanya tampil setelah ada hasil browser sesi ini;
+                                 tooltip menampung alasan lengkap (grup sebagian). -->
+                            <TextBlock Text="{Binding LastBrowserResultText}" ToolTip="{Binding LastBrowserResultTooltip}"
+                                       Visibility="{Binding HasLastBrowserResult, Converter={StaticResource BoolVis}}"
+                                       Margin="22,1,0,0" FontSize="10.5" Foreground="{Binding LastBrowserResultDot}"
+                                       FontFamily="{StaticResource CyberTechFont}"/>
+                        </StackPanel>
+
+                        <!-- Right: App Identity & Firmware Version (teks polos) -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <!-- §171: badge versi menjadi teks polos - kotak
+                                 Border (latar + garis) DIBUANG; tombol +
+                                 perilaku klik (OpenAboutCommand) + posisi
+                                 tidak berubah. Saat ditekan (IsPressed,
+                                 trigger sesudah hover agar menang): teks
+                                 biru terang + glow biru. -->
+                            <Button Foreground="#6B778D" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                    ToolTip="{Binding [S1554], Source={x:Static loc:LocSource.Instance}, Mode=OneWay}"
+                                    Command="{Binding OpenAboutCommand}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Foreground" Value="#E8EAF0"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter Property="Foreground" Value="#5BE4FF"/>
+                                                <Setter Property="Effect">
+                                                    <Setter.Value>
+                                                        <DropShadowEffect Color="#1E86E0" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <TextBlock Text="{Binding AppVersionText}" FontSize="10.5" Margin="0,0,8,0"
+                                           FontWeight="Bold" FontFamily="{StaticResource CyberTechFont}"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </views:ChamferBorder>
+    </Grid>
+</Window>
